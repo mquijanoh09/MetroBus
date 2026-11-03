@@ -56,17 +56,19 @@ public class TripPlanner {
         String destStr = destinationText == null ? "" : destinationText.trim();
 
         if (originStr.isEmpty()) {
-            return PlanResult.failure(PlanResult.Status.EMPTY_INPUT, "Escriba la dirección de origen.");
+            return PlanResult.failure(PlanResult.Status.EMPTY_INPUT, "Escriba la dirección de origen.",
+                    PlanResult.Field.ORIGIN);
         }
         if (destStr.isEmpty()) {
-            return PlanResult.failure(PlanResult.Status.EMPTY_INPUT, "Escriba la dirección de destino.");
+            return PlanResult.failure(PlanResult.Status.EMPTY_INPUT, "Escriba la dirección de destino.",
+                    PlanResult.Field.DESTINATION);
         }
 
-        PlanResult originError = checkAddress(originStr, "origen");
+        PlanResult originError = checkAddress(originStr, "origen", PlanResult.Field.ORIGIN);
         if (originError != null) {
             return originError;
         }
-        PlanResult destError = checkAddress(destStr, "destino");
+        PlanResult destError = checkAddress(destStr, "destino", PlanResult.Field.DESTINATION);
         if (destError != null) {
             return destError;
         }
@@ -99,22 +101,22 @@ public class TripPlanner {
     }
 
     /** Returns a failure result if the address cannot be used, or null if it is fine. */
-    private PlanResult checkAddress(String address, String label) {
+    private PlanResult checkAddress(String address, String label, PlanResult.Field field) {
         Optional<ParsedAddress> parsed = addressParser.parse(address);
         if (parsed.isEmpty()) {
             return PlanResult.failure(PlanResult.Status.INVALID_FORMAT,
                     "La dirección de " + label + " no tiene un formato válido. "
-                            + "Ejemplos: Calle 10 # 50 - 30, Carrera 43A # 1 Sur - 100, CL 50 x CR 70.");
+                            + "Ejemplos: Calle 10 # 50 - 30, Carrera 43A # 1 Sur - 100, CL 50 x CR 70.", field);
         }
         Optional<Coordinate> coord = addressLocator.locate(parsed.get());
         if (coord.isEmpty()) {
             return PlanResult.failure(PlanResult.Status.NOT_FOUND,
                     "No se pudo localizar la dirección de " + label
-                            + ". Puede estar fuera del área de cobertura.");
+                            + ". Puede estar fuera del área de cobertura.", field);
         }
         if (!addressLocator.isInBounds(coord.get())) {
             return PlanResult.failure(PlanResult.Status.OUT_OF_BOUNDS,
-                    "La dirección de " + label + " está fuera de los límites de Medellín.");
+                    "La dirección de " + label + " está fuera de los límites de Medellín.", field);
         }
         return null;
     }

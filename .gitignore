@@ -48,3 +48,6 @@ mb_tmp*
 main-error*.txt
 main-output*.txt
 test_results.txt
+final-test*.txt
+test-output.txt
+test-results.txt

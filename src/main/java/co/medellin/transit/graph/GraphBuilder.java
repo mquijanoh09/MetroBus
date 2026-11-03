@@ -155,7 +155,7 @@ public class GraphBuilder {
             }
             
             // Create route lookup map
-            Map<String, Route> routeMap = new HashMap<>();
+            Map<Integer, Route> routeMap = new HashMap<>();
             for (Route route : routes) {
                 routeMap.put(route.getId(), route);
             }
@@ -249,10 +249,6 @@ public class GraphBuilder {
                     stationNameToWalkStateId.put(stationName, nextStateId[0]);
                     // Also map the "STATION:name" format for walk links
                     placeStringToWalkStateId.put("STATION:" + stationName, nextStateId[0]);
-                    // Also compute the hash ID that WalkLinkReader would generate
-                    String stationKey = "STATION:" + stationName;
-                    int hashId = Math.abs(stationKey.hashCode() % 100_000_000);
-                    stopIdToWalkStateId.put(hashId, nextStateId[0]);
                     nextStateId[0]++;
                 }
             }
@@ -421,8 +417,11 @@ public class GraphBuilder {
                             return nextStateId[0]++;
                         });
                         
-                        // Use secToNext from data
-                        int realSec = current.secToNext();
+                        // Use secToNext from data (skip if last station has no next)
+                        if (current.secToNext().isEmpty()) {
+                            continue; // Last station - no ride edge to next
+                        }
+                        int realSec = current.secToNext().get();
                         int perceivedCost = realSec; // No penalty for RIDE edges
                         
                         Edge rideEdge = new Edge(fromStateId, toStateId, EdgeKind.RIDE, realSec, perceivedCost);
@@ -460,8 +459,12 @@ public class GraphBuilder {
                         });
                         
                         // Use secToNext from next segment (since we're going in reverse)
+                        // Skip if last station has no next
+                        if (next.secToNext().isEmpty()) {
+                            continue; // Last station - no ride edge to next
+                        }
                         // In reverse direction, we use the same travel time
-                        int realSec = next.secToNext();
+                        int realSec = next.secToNext().get();
                         int perceivedCost = realSec; // No penalty for RIDE edges
                         
                         Edge rideEdge = new Edge(fromStateId, toStateId, EdgeKind.RIDE, realSec, perceivedCost);
@@ -570,15 +573,14 @@ public class GraphBuilder {
             int skippedWalkLinks = 0;
             
             for (WalkLink link : walkLinks) {
-                // Look up WALK state IDs using the parsed place IDs
-                // These IDs are either stop IDs or hash IDs for stations
-                Integer stateIdA = stopIdToWalkStateId.get(link.placeA());
-                Integer stateIdB = stopIdToWalkStateId.get(link.placeB());
+                // Look up WALK state IDs using the place strings (STOP:123 or STATION:name)
+                Integer stateIdA = placeStringToWalkStateId.get(link.placeA());
+                Integer stateIdB = placeStringToWalkStateId.get(link.placeB());
                 
                 if (stateIdA == null || stateIdB == null) {
                     skippedWalkLinks++;
                     if (skippedWalkLinks <= 5) {
-                        LOGGER.warning(String.format("Omitiendo enlace peatonal: placeA=%d, placeB=%d (no encontrado)", 
+                        LOGGER.warning(String.format("Omitiendo enlace peatonal: placeA=%s, placeB=%s (no encontrado)", 
                                 link.placeA(), link.placeB()));
                     }
                     continue;

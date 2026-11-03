@@ -7,41 +7,41 @@ import java.util.Objects;
  * Can represent either a bus route or a metro line.
  */
 public final class Route {
-    private final String id;
-    private final String displayName;
-    private final RouteType type;
-    private final String color;
+    private final int id;           // id_ruta from JSON (internal ID)
+    private final String codigo;    // user-visible route code (e.g., "263")
+    private final String nombre;    // route name (e.g., "12 de Octubre - Calle 90")
+    private final String tipo;      // route type for fares (e.g., "Directa Centro", "Integrada")
 
     /**
      * Creates a new route.
      *
-     * @param id unique identifier for the route
-     * @param displayName human-readable route name
-     * @param type route type (BUS or METRO)
-     * @param color color code for route display (e.g., hex color)
-     * @throws NullPointerException if any parameter is null
+     * @param id unique internal identifier (id_ruta)
+     * @param codigo user-visible route code
+     * @param nombre route name
+     * @param tipo route type (used for fare calculation)
+     * @throws NullPointerException if any String parameter is null
      */
-    public Route(String id, String displayName, RouteType type, String color) {
-        this.id = Objects.requireNonNull(id, "id cannot be null");
-        this.displayName = Objects.requireNonNull(displayName, "displayName cannot be null");
-        this.type = Objects.requireNonNull(type, "type cannot be null");
-        this.color = Objects.requireNonNull(color, "color cannot be null");
+    public Route(int id, String codigo, String nombre, String tipo) {
+        this.id = id;
+        this.codigo = Objects.requireNonNull(codigo, "codigo cannot be null");
+        this.nombre = Objects.requireNonNull(nombre, "nombre cannot be null");
+        this.tipo = Objects.requireNonNull(tipo, "tipo cannot be null");
     }
 
-    public String getId() {
+    public int getId() {
         return id;
     }
 
-    public String getDisplayName() {
-        return displayName;
+    public String getCodigo() {
+        return codigo;
     }
 
-    public RouteType getType() {
-        return type;
+    public String getNombre() {
+        return nombre;
     }
 
-    public String getColor() {
-        return color;
+    public String getTipo() {
+        return tipo;
     }
 
     @Override
@@ -49,24 +49,24 @@ public final class Route {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Route route = (Route) o;
-        return Objects.equals(id, route.id) &&
-               Objects.equals(displayName, route.displayName) &&
-               type == route.type &&
-               Objects.equals(color, route.color);
+        return id == route.id &&
+               Objects.equals(codigo, route.codigo) &&
+               Objects.equals(nombre, route.nombre) &&
+               Objects.equals(tipo, route.tipo);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, displayName, type, color);
+        return Objects.hash(id, codigo, nombre, tipo);
     }
 
     @Override
     public String toString() {
         return "Route{" +
-               "id='" + id + '\'' +
-               ", displayName='" + displayName + '\'' +
-               ", type=" + type +
-               ", color='" + color + '\'' +
+               "id=" + id +
+               ", codigo='" + codigo + '\'' +
+               ", nombre='" + nombre + '\'' +
+               ", tipo='" + tipo + '\'' +
                '}';
     }
 }

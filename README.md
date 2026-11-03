@@ -31,8 +31,8 @@ momento se estaba corrigiendo el enrutamiento.
         │  origen y destino como texto
         ▼
 ┌──────────────────────────────┐
-│ ui: gui/MainWindow,          │  ventana: pantalla de inicio y planificador
-│     PlannerPanel ──┐         │
+│ ui: gui/MainWindow,          │  ventana: mapa de la red y planificador
+│     AppController ─┐         │
 │     Menu ──────────┤         │  consola: menú de texto
 │                    ▼         │
 │     TripPlanner, TripPrinter │  validan, calculan y presentan el viaje
@@ -66,7 +66,7 @@ momento se estaba corrigiendo el enrutamiento.
 | Geocodificación | Dirección de Medellín a coordenadas, sin internet | `geocoding/AddressParser.java`, `geocoding/AddressLocator.java` |
 | Enrutamiento | Dijkstra multi-origen y multi-destino; traducción a pasos | `routing/Router.java`, `routing/StepBuilder.java`, `routing/Parameters.java` |
 | Tarifas | Precio del viaje con integración bus + Metro | `fares/FareCalculator.java`, `fares/FareConfig.java` |
-| Interfaz gráfica | Ventana con pantalla de inicio, planificador y ayuda | `ui/gui/MainWindow.java`, `ui/gui/HomePanel.java`, `ui/gui/PlannerPanel.java`, `ui/TripPlanner.java`, `ui/PlanResult.java` |
+| Interfaz gráfica | Ventana con el mapa real de la red y el planificador, adaptable desde 400 px de ancho (ver [DESIGN.md](DESIGN.md)) | `ui/gui/MainWindow.java`, `ui/gui/state/`, `ui/gui/view/`, `ui/TripPlanner.java`, `ui/PlanResult.java` |
 | Interfaz de consola | Pantalla de inicio y menú de texto (`--consola`) | `ui/HomeScreen.java`, `ui/Menu.java`, `ui/TripPrinter.java` |
 | Arranque | Elige el modo, carga el grafo y conecta las piezas | `Main.java` |
 
@@ -85,10 +85,11 @@ java -jar target/transit-routing-1.0.0.jar                   # abre la ventana
 java -jar target/transit-routing-1.0.0.jar --consola         # o el menú de texto
 ```
 
-El cuarto comando abre la ventana en la pantalla de inicio. Mientras se carga la red (en
-la medición, la ventana ya estaba visible al primer segundo con el aviso
-`Cargando la red de transporte de Medellín…` y el botón **Planear un viaje**
-desactivado), y después muestra `Listo. Red cargada: 13.895 nodos y 82.160 conexiones.`
+El cuarto comando abre la ventana en la pantalla de inicio: el formulario "¿A dónde vas?"
+y, al lado, el mapa de las líneas de Metro, Metroplús, Metrocable y tranvía dibujado con
+las coordenadas reales. En la medición la ventana estaba visible a los 0,5 s. Mientras
+carga el grafo (unos 1,5 s) ya se puede escribir: el botón dice **Cargando la red…** y,
+si se presiona Enter, la búsqueda queda en cola y corre sola al terminar la carga.
 Con `--consola` se usa el menú de texto, del que se sale escribiendo `salir`. En un equipo
 sin pantalla gráfica la app pasa sola al modo consola.
 
@@ -131,17 +132,29 @@ exige volver a compilar.
 
 ### La ventana
 
-La pantalla de inicio tiene tres botones: **Planear un viaje** (se activa cuando termina
-la carga), **Cómo escribir direcciones** y **Salir**. El planificador pide origen y destino
-y muestra el resultado como una lista de pasos. Por dentro, la ventana llama a
-`TripPlanner.plan(origen, destino)`, que devuelve un `PlanResult`: o un viaje con su
-tarifa, o un estado de error (`EMPTY_INPUT`, `INVALID_FORMAT`, `NOT_FOUND`,
-`OUT_OF_BOUNDS`, `TOO_CLOSE`, `NO_ROUTE`, `ERROR`) con el mensaje en español. La consulta
-corre en un `SwingWorker`, fuera del hilo que dibuja la ventana.
+El diseño completo está en [DESIGN.md](DESIGN.md). Hay una sola pantalla: el formulario
+de origen y destino con tres ejemplos de un clic, y el mapa de la red. Al buscar, el
+resultado reemplaza al formulario: la duración total en grande; la tarifa, la distancia a
+pie y los transbordos; y el viaje por **tramos** (cada bus o línea es un tramo con su
+insignia, por ejemplo `A` para el Metro o `310` para un bus con su nombre público, que se
+lee de `routes.json` en lugar del código interno `90007`). El mapa resalta el viaje y
+atenúa el resto. Los errores aparecen bajo el formulario y marcan el campo culpable.
 
-**Qué se verificó de la ventana:** se ejecutó en una pantalla virtual (Xvfb) y se
-capturó la pantalla de inicio al primer segundo (cargando) y a los ocho (lista). El
-planificador no se manejó a mano; lo cubren `TripPlannerTest` y `GuiPanelsTest`, que pasan.
+- **Teclado:** Enter pasa al destino y busca, Alt+I intercambia origen y destino, Esc
+  vuelve a editar. El foco siempre se ve.
+- **Tamaños:** compacto (< 760 px, una columna con el mapa arriba), medio y amplio.
+- **Lectores de pantalla:** todos los controles tienen nombre accesible. En Windows hay
+  que activar una vez Java Access Bridge con `jabswitch -enable` (viene con el JDK).
+- **Arquitectura:** un único estado inmutable (`AppState`) que solo cambia el
+  `AppController`; las vistas se redibujan a partir de él. La consulta corre en un hilo
+  aparte, así que la ventana no se congela.
+- **Fuentes:** IBM Plex (licencia OFL, incluida) viaja dentro del `.jar`.
+
+**Qué se verificó de la ventana:** se ejecutó en una pantalla virtual (Xvfb) a 400, 560,
+760, 900, 1120 y 1300 px de ancho, con búsquedas reales de Metro, bus y error. Las pruebas
+`AppControllerTest`, `ViewsTest`, `ModelTest`, `ThemeTest` y `MessagesTest` (45 en total)
+cubren los estados, lo que muestra cada vista con datos reales, el contraste de los
+colores y que cada control tenga nombre accesible.
 
 ### La consola
 
@@ -699,8 +712,8 @@ MetroBus/
     ├── Main.java                   Arranque: carga el grafo y abre la pantalla de inicio
     ├── ui/                         TripPlanner y PlanResult (lógica de una consulta);
     │   │                           HomeScreen, Menu, TripPrinter (modo consola)
-    │   └── gui/                    MainWindow, HomePanel, PlannerPanel, StepRow,
-    │                               HeaderBar, HelpText, Theme (ventana Swing)
+    │   └── gui/                    MainWindow, Theme, Fonts; state/ (estado y controlador),
+    │                               view/ (mapa, formulario, resultado), kit/, model/
     ├── geocoding/                  AddressParser (texto → números),
     │                               AddressLocator (→ lat/lon), StreetType, Cardinal…
     ├── routing/                    Router (Dijkstra), StepBuilder (camino → pasos),
@@ -773,13 +786,13 @@ del proyecto.
 |---|---|---|---|---|---|
 | `model` | 74 | 0 | 0 | 0 | Validaciones de `State`, `Edge`, `Place`, `Trip`… |
 | `fares` | 27 | 0 | 0 | 0 | `FareCalculator` con viajes armados a mano |
-| `ui` | 31 | 0 | 0 | 0 | Pantalla de inicio, menú, impresión, `TripPlanner` y paneles de la ventana |
+| `ui` | 68 | 0 | 0 | 0 | Consola, `TripPlanner` y la ventana: estados, vistas, colores y accesibilidad |
 | `MainTest` | 7 | 0 | 0 | 0 | Arranque |
 | `data` | 96 | 24 | 1 | 0 | Lectores de CSV y JSON |
 | `geocoding` | 95 | 21 | 0 | 0 | Análisis y localización de direcciones |
 | `routing` | 70 | 4 | 3 | 0 | Dijkstra en grafos pequeños y casos de referencia |
 | `graph` | 23 | 2 | 4 | 8 | Construcción del grafo |
-| **Total** | **423** | **51** | **8** | **8** | `BUILD FAILURE` |
+| **Total** | **460** | **51** | **8** | **8** | `BUILD FAILURE` |
 
 Con `-DargLine="-Dtransit.data.dir=…/data"` el total baja a **33 fallos y 8 errores**: 18 de
 los 21 fallos de geocodificación eran solo la ruta fija de Windows. En el equipo del autor,

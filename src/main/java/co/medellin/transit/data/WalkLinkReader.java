@@ -13,10 +13,10 @@ public class WalkLinkReader extends CsvReader<WalkLink> {
     
     @Override
     protected Optional<WalkLink> parseRecord(CSVRecord record, int lineNumber) throws Exception {
-        // Parse place IDs - they are prefixed strings like "STOP:53191" or "STATION:5"
-        int placeA = parsePlaceId(record, "place_a");
+        // Read place IDs as strings - keep original format like "STOP:53191" or "STATION:Aguacatala"
+        String placeA = getString(record, "place_a");
         String nameA = getString(record, "name_a");
-        int placeB = parsePlaceId(record, "place_b");
+        String placeB = getString(record, "place_b");
         String nameB = getString(record, "name_b");
         
         // Normalize kind format - CSV has "stop_stop", we need "stop-to-stop"
@@ -37,35 +37,6 @@ public class WalkLinkReader extends CsvReader<WalkLink> {
         );
         
         return Optional.of(link);
-    }
-    
-    /**
-     * Parses a place ID from a prefixed string like "STOP:53191" or "STATION:5".
-     * For named stations like "STATION:Aguacatala", generates a hash-based ID.
-     *
-     * @param record the CSV record
-     * @param fieldName the field name
-     * @return the numeric place ID
-     * @throws IllegalArgumentException if the format is invalid
-     */
-    private int parsePlaceId(CSVRecord record, String fieldName) {
-        String value = getString(record, fieldName);
-        int colonIndex = value.indexOf(':');
-        
-        if (colonIndex < 0) {
-            throw new IllegalArgumentException(
-                "Place ID must be in format 'STOP:123' or 'STATION:5', got: " + value
-            );
-        }
-        
-        String idPart = value.substring(colonIndex + 1);
-        try {
-            return Integer.parseInt(idPart);
-        } catch (NumberFormatException e) {
-            // Handle named stations like "STATION:Aguacatala" by generating a consistent hash
-            // Use absolute value to ensure positive, and keep in safe integer range
-            return Math.abs(value.hashCode() % 100_000_000);
-        }
     }
     
     /**

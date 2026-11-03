@@ -5,9 +5,9 @@ package co.medellin.transit.data;
  * Parsed from walk_links.csv.
  */
 public record WalkLink(
-    int placeA,
+    String placeA,
     String nameA,
-    int placeB,
+    String placeB,
     String nameB,
     String kind,
     double straightM,
@@ -22,11 +22,11 @@ public record WalkLink(
      * @throws IllegalArgumentException if validation fails
      */
     public WalkLink {
-        if (placeA < 0) {
-            throw new IllegalArgumentException("Place A ID must be >= 0, got: " + placeA);
+        if (placeA == null || placeA.isEmpty()) {
+            throw new IllegalArgumentException("Place A must be non-null and non-empty");
         }
-        if (placeB < 0) {
-            throw new IllegalArgumentException("Place B ID must be >= 0, got: " + placeB);
+        if (placeB == null || placeB.isEmpty()) {
+            throw new IllegalArgumentException("Place B must be non-null and non-empty");
         }
         // Empty names are allowed - some walk links don't have named places
         if (nameA == null) {

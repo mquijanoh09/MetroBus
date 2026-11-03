@@ -25,10 +25,10 @@ public class TransitLineReader extends CsvReader<TransitSegment> {
             // Handle optional dist_to_next_m and sec_to_next for last stations
             // Last station of each line has empty values (no next station)
             Optional<String> distStr = getOptionalString(record, "dist_to_next_m");
-            double distToNextM = distStr.map(Double::parseDouble).orElse(0.0);
+            Optional<Double> distToNextM = distStr.map(Double::parseDouble);
             
             Optional<String> secStr = getOptionalString(record, "sec_to_next");
-            int secToNext = secStr.map(Integer::parseInt).orElse(0);
+            Optional<Integer> secToNext = secStr.map(Integer::parseInt);
             
             // Map CSV mode values to expected values
             String normalizedMode = normalizeMode(mode);

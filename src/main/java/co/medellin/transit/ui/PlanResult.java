@@ -24,15 +24,25 @@ public final class PlanResult {
         ERROR
     }
 
+    /** Which input caused a failure, so the interface can point at it. */
+    public enum Field {
+        NONE,
+        ORIGIN,
+        DESTINATION
+    }
+
     private final Status status;
+    private final Field field;
     private final String message;
     private final Place origin;
     private final Place destination;
     private final Trip trip;
     private final FareResult fare;
 
-    private PlanResult(Status status, String message, Place origin, Place destination, Trip trip, FareResult fare) {
+    private PlanResult(Status status, Field field, String message, Place origin, Place destination,
+                       Trip trip, FareResult fare) {
         this.status = status;
+        this.field = field;
         this.message = message;
         this.origin = origin;
         this.destination = destination;
@@ -41,16 +51,21 @@ public final class PlanResult {
     }
 
     public static PlanResult success(Place origin, Place destination, Trip trip, FareResult fare) {
-        return new PlanResult(Status.OK, "Ruta encontrada",
+        return new PlanResult(Status.OK, Field.NONE, "Ruta encontrada",
                 Objects.requireNonNull(origin), Objects.requireNonNull(destination),
                 Objects.requireNonNull(trip), Objects.requireNonNull(fare));
     }
 
     public static PlanResult failure(Status status, String message) {
+        return failure(status, message, Field.NONE);
+    }
+
+    public static PlanResult failure(Status status, String message, Field field) {
         if (status == Status.OK) {
             throw new IllegalArgumentException("A failure cannot have status OK");
         }
-        return new PlanResult(status, Objects.requireNonNull(message), null, null, null, null);
+        return new PlanResult(status, Objects.requireNonNull(field), Objects.requireNonNull(message),
+                null, null, null, null);
     }
 
     public boolean isSuccess() {
@@ -59,6 +74,11 @@ public final class PlanResult {
 
     public Status getStatus() {
         return status;
+    }
+
+    /** The input that caused the failure, or {@link Field#NONE}. */
+    public Field getField() {
+        return field;
     }
 
     public String getMessage() {

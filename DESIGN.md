@@ -225,7 +225,7 @@ El campo que causó el error recibe el foco y su borde pasa a `ERROR`.
 - Siempre se trata de **tú**: "Escribe", "Prueba", "Camina".
 - Los verbos van en imperativo para las instrucciones: "Camina a Poblado", no "Caminar a Poblado".
 - Los números siguen el formato colombiano: `$3.820`, `1,5 km`, `1 h 05 min`. Los minutos se redondean hacia arriba, igual que en la consola.
-- Se escriben los nombres propios de los datos tal como vienen. "Medellin" sin tilde viene del dataset de la Alcaldía, y la interfaz lo corrige solo en sus propios textos.
+- Se escriben los nombres propios de los datos tal como vienen. La única excepción es el sufijo ", Medellin" que el backend agrega a las direcciones: se quita porque repite la ciudad.
 - No se usan signos de exclamación ni frases de cortesía vacías como "¡Gracias por usar MetroBus!".
 
 ---
@@ -244,7 +244,7 @@ El campo que causó el error recibe el foco y su borde pasa a `ERROR`.
   - `LineBadge`: la insignia de línea.
   - `RouteCatalog`: traduce `id_ruta` → `codigo` + `nombre` desde `routes.json`.
   - `MainWindow`: se conserva su API pública (`open`, `showReady`, `showFatalError`).
-- `TripPlanner` y `PlanResult` no cambian. La lógica sigue separada de la vista.
+- `TripPlanner` y `PlanResult` siguen siendo la lógica sin vista. `PlanResult` solo gana `getField()`, que dice qué campo causó el error, para poder marcarlo.
 - **Lo que no se toca:** `Router`, `GraphBuilder`, `FareCalculator` y `StepBuilder`.
 
 ### 8.1 Arquitectura: estado único y flujo en un solo sentido

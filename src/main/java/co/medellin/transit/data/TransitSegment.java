@@ -2,6 +2,8 @@ package co.medellin.transit.data;
 
 import co.medellin.transit.model.Coordinate;
 
+import java.util.Optional;
+
 /**
  * Represents a segment of a metro/metroplus/tranvía/metrocable line.
  * Parsed from transit_lines.csv.
@@ -12,8 +14,8 @@ public record TransitSegment(
     int order,
     String station,
     Coordinate coordinate,
-    double distToNextM,
-    int secToNext
+    Optional<Double> distToNextM,
+    Optional<Integer> secToNext
 ) {
     private static final double MIN_LAT = 6.15;
     private static final double MAX_LAT = 6.35;
@@ -54,11 +56,18 @@ public record TransitSegment(
                 String.format("Coordinate (%.4f, %.4f) is outside Medellín bounds", lat, lon)
             );
         }
-        if (distToNextM < 0) {
-            throw new IllegalArgumentException("Distance to next must be >= 0, got: " + distToNextM);
+        if (distToNextM == null) {
+            throw new IllegalArgumentException("distToNextM cannot be null (use Optional.empty() for no next station)");
         }
-        if (secToNext < 0) {
-            throw new IllegalArgumentException("Seconds to next must be >= 0, got: " + secToNext);
+        if (secToNext == null) {
+            throw new IllegalArgumentException("secToNext cannot be null (use Optional.empty() for no next station)");
+        }
+        // If present, must be >= 0
+        if (distToNextM.isPresent() && distToNextM.get() < 0) {
+            throw new IllegalArgumentException("Distance to next must be >= 0, got: " + distToNextM.get());
+        }
+        if (secToNext.isPresent() && secToNext.get() < 0) {
+            throw new IllegalArgumentException("Seconds to next must be >= 0, got: " + secToNext.get());
         }
     }
 }

@@ -33,10 +33,9 @@ public class BusSegmentReader extends CsvReader<BusSegment> {
         double straightM = parseDouble(record, "straight_m");
         double usedM = parseDouble(record, "used_m");
         
-        // Handle empty road_m - use used_m as fallback
-        double roadM = getOptionalString(record, "road_m")
-            .map(Double::parseDouble)
-            .orElse(usedM);
+        // road_m is optional - use used_m as fallback if empty
+        String roadMStr = record.get("road_m");
+        double roadM = (roadMStr == null || roadMStr.trim().isEmpty()) ? usedM : Double.parseDouble(roadMStr);
         
         String method = getString(record, "method");
         

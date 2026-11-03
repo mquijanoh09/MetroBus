@@ -58,38 +58,34 @@
 
 ---
 
-## Task 1.3: Verify BusSegmentReader
+## Task 1.3: Add real-file test to BusSegmentReaderTest
 
 **Goal:** Ensure BusSegmentReader correctly loads all 9,550 bus segments.
 
 **Changes:**
-1. Create `co.medellin.transit.data.BusSegmentReaderTest`:
-   - `testReadRealFile()`: load `data/bus_segments.csv`, assert 9,550 segments
-   - `testFieldParsing()`: verify first segment has correct route_id, direction, stops, distances
-   - `testDirectionParsing()`: verify both "outbound"/0 and "inbound"/1 are parsed correctly
-   - `testMalformedRow()`: sample CSV with invalid direction, verify skip + warning
+1. Add to existing `co.medellin.transit.data.BusSegmentReaderTest`:
+   - `testReadRealFile()`: load `data/bus_segments.csv` from relative path, assert 9,550 segments, FAIL if missing
+   - Verify first segment has correct route_id, direction, stops, distances
 
 2. Fix any issues found in `BusSegmentReader` or `BusSegment` record.
 
 **Acceptance:**
 - `mvn test` passes with 0 failures
 - Real file test counts exactly 9,550 segments
-- Direction parsing handles both string and numeric formats
-- Malformed row test logs warning and continues
+- Real file test fails with clear error if file missing (no skip logic)
+- All existing tests continue to pass
 
 ---
 
-## Task 1.4: Verify TransitLineReader
+## Task 1.4: Add real-file tests to TransitLineReaderTest
 
 **Goal:** Ensure TransitLineReader correctly loads all 98 transit line segments with UTF-8 names.
 
 **Changes:**
-1. Create `co.medellin.transit.data.TransitLineReaderTest`:
-   - `testReadRealFile()`: load `data/transit_lines.csv`, assert 98 segments
+1. Add to existing `co.medellin.transit.data.TransitLineReaderTest`:
+   - `testReadRealFile()`: load `data/transit_lines.csv` from relative path, assert 98 segments, FAIL if missing
    - `testUTF8StationNames()`: verify "Niquía" (first station) preserves accent
-   - `testEmptyDistanceForLastStation()`: verify last station of line A has distToNextM=0, secToNext=0
-   - `testModeNormalization()`: verify "metro" → "Metro", "brt" → "Metroplus", etc.
-   - `testMalformedRow()`: sample CSV with invalid mode, verify skip + warning
+   - `testLastStationEmptyFields()`: verify last station of line A has distToNextM=0, secToNext=0
 
 2. Fix any issues found in `TransitLineReader` or `TransitSegment` record.
 
@@ -97,54 +93,67 @@
 - `mvn test` passes with 0 failures
 - Real file test counts exactly 98 segments
 - UTF-8 test verifies "Niquía" appears correctly (not "NiquÃa" or mangled)
-- Last station has empty optional fields handled correctly
-- Malformed row test logs warning and continues
+- Last station test verifies 0 means "no next station"
+- Real file test fails with clear error if file missing (no skip logic)
+- All existing tests continue to pass
 
 ---
 
-## Task 1.5: Verify WalkLinkReader
+## Task 1.5: Fix WalkLink and WalkLinkReader for String place keys
 
-**Goal:** Ensure WalkLinkReader correctly loads all 25,865 walk links with quoted names.
+**Goal:** Update WalkLink to use String place keys and fix all existing tests.
 
 **Changes:**
-1. Create `co.medellin.transit.data.WalkLinkReaderTest`:
-   - `testReadRealFile()`: load `data/walk_links.csv`, assert 25,865 links
-   - `testQuotedNamesWithCommas()`: verify a link with `"CL 20B Sur 27-, Medellin"` parses correctly
-   - `testPlaceKeyParsing()`: verify `STOP:53191` → placeA=53191, `STATION:Aguacatala` → hash-based ID
-   - `testKindNormalization()`: verify "stop_stop" → "stop-to-stop" conversion
-   - `testMalformedRow()`: sample CSV with invalid kind, verify skip + warning
+1. Update `co.medellin.transit.data.WalkLink` record:
+   - Change `int placeA` → `String placeA`
+   - Change `int placeB` → `String placeB`
+   - Update validation: non-null/non-empty strings
 
-2. Fix any issues found in `WalkLinkReader` or `WalkLink` record.
+2. Update `co.medellin.transit.data.WalkLinkReader`:
+   - Read place_a and place_b as strings directly (no parsing, no hash generation)
+   - Keep kind normalization: "stop_stop" → "stop-to-stop"
+
+3. Fix ALL existing tests in `WalkLinkReaderTest`:
+   - Change all integer place IDs to String format matching test data
+   - Update assertions to expect String values
+
+4. Add new tests to `WalkLinkReaderTest`:
+   - `testReadRealFile()`: load `data/walk_links.csv` from relative path, assert 25,865 links, FAIL if missing
+   - `testPrefixedPlaceKeys()`: verify `STOP:53191` and `STATION:Aguacatala` kept as-is
+   - `testQuotedNamesWithCommas()`: verify comma handling in quoted names
 
 **Acceptance:**
-- `mvn test` passes with 0 failures
+- `mvn test` passes with 0 failures for WalkLinkReaderTest
 - Real file test counts exactly 25,865 links
-- Quoted names with commas are parsed without splitting on internal comma
-- Place keys are parsed correctly (numeric IDs for stops, hash for named stations)
-- Malformed row test logs warning and continues
+- Place keys are kept as original strings (STOP:53191, STATION:Aguacatala)
+- All existing tests pass with String place keys
+- Real file test fails with clear error if file missing (no skip logic)
 
 ---
 
-## Task 1.6: Verify StopArcGisReader
+## Task 1.6: Fix StopArcGisReader and existing tests
 
-**Goal:** Ensure StopArcGisReader correctly loads and deduplicates stops.
+**Goal:** Ensure StopArcGisReader correctly loads stops with direccion as name.
 
 **Changes:**
-1. Create `co.medellin.transit.data.StopArcGisReaderTest`:
-   - `testReadPaginatedRealFiles()`: load `data/raw/stops_*.json`, assert 3,590 unique stops (from 10,043 features)
-   - `testDeduplication()`: verify that the reader reports correct deduplication counts in logs
-   - `testCoordinateExtraction()`: verify a known stop has correct latitud/longitud
-   - `testMissingAddress()`: verify stops without `direccion` get default "Parada {id}" address
-   - `testMalformedFeature()`: sample JSON missing id_paradero, verify skip + warning
+1. Update `co.medellin.transit.data.StopArcGisReader`:
+   - Use `direccion` field as Stop name (same value for both name and address)
+   - If `direccion` is missing, use "Parada {id_paradero}" for both name and address
 
-2. Fix any issues found in `StopArcGisReader`.
+2. Fix ALL existing tests in `StopArcGisReaderTest`:
+   - Replace invented "nombre_paradero" field with "direccion"
+   - Update expected names to match direccion values
+   - Keep all other assertions unchanged
+
+3. Add new tests to `StopArcGisReaderTest`:
+   - `testReadPaginatedRealFiles()`: load `data/raw/stops_*.json` from relative path, assert 10,043 features → 3,590 unique stops, FAIL if missing
+   - `testMissingDireccion()`: verify stops without `direccion` get "Parada {id}" for name and address
 
 **Acceptance:**
-- `mvn test` passes with 0 failures
-- Real file test counts exactly 3,590 unique stops (not 10,043)
-- Deduplication logs show "10043 total features → 3590 unique physical stops"
-- Missing address handling works correctly
-- Malformed feature test logs warning and continues
+- `mvn test` passes with 0 failures for StopArcGisReaderTest
+- Real file test counts exactly 3,590 unique stops (from 10,043 features)
+- All existing tests pass with real field names (id_paradero, direccion, latitud, longitud)
+- Real file test fails with clear error if file missing (no skip logic)
 
 ---
 
@@ -154,19 +163,19 @@
 
 **Changes:**
 1. Create `co.medellin.transit.data.DataLoadingIntegrationTest`:
-   - `testAllFileCounts()`: Load all 6 file types, assert all counts in one test
+   - `testAllFileCounts()`: Load all 6 file types from relative paths, assert all counts in one test
      - Bus segments: 9,550
      - Transit lines: 98
      - Walk links: 25,865
      - Stops: 3,590 unique (from 10,043 features)
      - Routes: 252
      - Stations: 81
-   - Use a helper method to get data directory from system property or skip test if not set
+   - FAIL with clear error if any file missing (no skip logic)
 
 **Acceptance:**
 - `mvn test` passes with 0 failures
 - Integration test verifies all 6 counts in requirements
-- Test is skipped with clear message if data directory not available (not a failure)
+- Test fails (not skips) if data directory or files not available
 
 ---
 

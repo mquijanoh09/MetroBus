@@ -6,6 +6,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -220,5 +221,28 @@ class BusSegmentReaderTest {
         assertEquals(500, segments.size());
         assertEquals(1, segments.get(0).fromStopId());
         assertEquals(501, segments.get(499).toStopId());
+    }
+
+    @Test
+    void testReadRealFile() throws IOException {
+        // Load real bus segments file
+        Path csvFile = Paths.get("data/bus_segments.csv");
+        
+        // Read bus segments
+        BusSegmentReader reader = new BusSegmentReader();
+        List<BusSegment> segments = reader.read(csvFile);
+        
+        // Verify count
+        assertEquals(9550, segments.size(), 
+            "Expected 9,550 bus segments from real file");
+        
+        // Spot-check first segment
+        BusSegment first = segments.get(0);
+        assertNotNull(first.routeId());
+        assertFalse(first.routeId().isEmpty());
+        assertTrue(first.direction() == 0 || first.direction() == 1);
+        assertTrue(first.fromStopId() >= 0);
+        assertTrue(first.toStopId() >= 0);
+        assertTrue(first.usedM() > 0);
     }
 }

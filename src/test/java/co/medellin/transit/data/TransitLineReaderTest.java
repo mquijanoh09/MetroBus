@@ -6,6 +6,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -42,8 +43,10 @@ class TransitLineReaderTest {
         assertEquals("Niquia", seg1.station());
         assertEquals(6.3100, seg1.coordinate().getLat(), 0.0001);
         assertEquals(-75.5650, seg1.coordinate().getLon(), 0.0001);
-        assertEquals(1200.5, seg1.distToNextM(), 0.01);
-        assertEquals(90, seg1.secToNext());
+        assertTrue(seg1.distToNextM().isPresent());
+        assertEquals(1200.5, seg1.distToNextM().get(), 0.01);
+        assertTrue(seg1.secToNext().isPresent());
+        assertEquals(90, seg1.secToNext().get());
         
         TransitSegment seg2 = segments.get(1);
         assertEquals("A", seg2.line());
@@ -212,12 +215,12 @@ class TransitLineReaderTest {
 
     @Test
     void testAllowZeroDistanceAndTime(@TempDir Path tempDir) throws IOException {
-        // Test that zero distance and time are allowed (last station on line)
+        // Test that empty distance and time fields are allowed (last station on line)
         Path csvFile = tempDir.resolve("transit_lines.csv");
         Files.writeString(csvFile, """
             line,mode,order,station,lat,lon,dist_to_next_m,sec_to_next
             A,Metro,0,First,6.2500,-75.5700,1200.5,90
-            A,Metro,1,Last,6.2600,-75.5750,0,0
+            A,Metro,1,Last,6.2600,-75.5750,,
             """);
         
         // Read transit segments - both should be valid
@@ -226,8 +229,12 @@ class TransitLineReaderTest {
         
         // Should have 2 valid segments
         assertEquals(2, segments.size());
-        assertEquals(0, segments.get(1).distToNextM(), 0.01);
-        assertEquals(0, segments.get(1).secToNext());
+        // First station has values
+        assertTrue(segments.get(0).distToNextM().isPresent());
+        assertTrue(segments.get(0).secToNext().isPresent());
+        // Last station has empty optionals (empty strings in CSV map to empty Optional)
+        assertTrue(segments.get(1).distToNextM().isEmpty());
+        assertTrue(segments.get(1).secToNext().isEmpty());
     }
 
     @Test
@@ -272,5 +279,66 @@ class TransitLineReaderTest {
         assertEquals(200, segments.size());
         assertEquals(0, segments.get(0).order());
         assertEquals(199, segments.get(199).order());
+    }
+
+    @Test
+    void testReadRealFile() throws IOException {
+        // Load real transit lines file
+        Path csvFile = Paths.get("data/transit_lines.csv");
+        
+        // Read transit segments
+        TransitLineReader reader = new TransitLineReader();
+        List<TransitSegment> segments = reader.read(csvFile);
+        
+        // Verify count
+        assertEquals(98, segments.size(), 
+            "Expected 98 transit line segments from real file");
+        
+        // Spot-check first segment
+        TransitSegment first = segments.get(0);
+        assertNotNull(first.line());
+        assertNotNull(first.mode());
+        assertNotNull(first.station());
+        assertNotNull(first.coordinate());
+    }
+
+    @Test
+    void testUTF8StationNames() throws IOException {
+        // Load real file and verify UTF-8 encoding preserves accents
+        Path csvFile = Paths.get("data/transit_lines.csv");
+        
+        TransitLineReader reader = new TransitLineReader();
+        List<TransitSegment> segments = reader.read(csvFile);
+        
+        // Find the first station (should be Niquía with accent)
+        TransitSegment first = segments.get(0);
+        assertEquals("Niquía", first.station(), 
+            "Station name should preserve UTF-8 accent (not 'NiquÃa')");
+    }
+
+    @Test
+    void testLastStationEmptyFields() throws IOException {
+        // Load real file and verify last station of line A has 0 for dist/sec
+        Path csvFile = Paths.get("data/transit_lines.csv");
+        
+        TransitLineReader reader = new TransitLineReader();
+        List<TransitSegment> segments = reader.read(csvFile);
+        
+        // Find last station of line A
+        TransitSegment lastOfLineA = null;
+        for (TransitSegment seg : segments) {
+            if ("A".equals(seg.line())) {
+                lastOfLineA = seg;
+            } else if (lastOfLineA != null) {
+                // Found first segment of next line, stop
+                break;
+            }
+        }
+        
+        assertNotNull(lastOfLineA, "Should find at least one station for line A");
+        assertTrue(lastOfLineA.distToNextM().isEmpty(), 
+            "Last station should have no distToNextM (no next station)");
+        assertTrue(lastOfLineA.secToNext().isEmpty(), 
+            "Last station should have no secToNext (no next station)");
     }
 }

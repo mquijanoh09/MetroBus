@@ -34,20 +34,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * 
  * This test ensures GraphBuilder constructs the graph correctly with all required components.
  */
-@EnabledIfSystemProperty(named = "test.data.directory", matches = ".*", disabledReason = "Real data directory not specified")
 public class DataCountTest {
 
-    private static final String DATA_DIR = System.getProperty("test.data.directory", 
-        "C:\\Users\\marti\\Downloads\\transporte-medellin\\kiro\\data");
+    private static final Path DATA_DIR = Paths.get("data");
 
     @Test
     public void testStopCount() throws Exception {
-        Path dataPath = Paths.get(DATA_DIR);
-        
         // Load stops using StopArcGisReader with deduplication
         // The reader will automatically search in the raw/ subdirectory
         StopArcGisReader stopReader = new StopArcGisReader();
-        List<Stop> stops = stopReader.readPaginated(dataPath, "stops", ".json");
+        List<Stop> stops = stopReader.readPaginated(DATA_DIR, "stops", ".json");
         
         // Should load exactly 3,590 unique physical stops, not 10,043
         assertEquals(3590, stops.size(), 
@@ -56,11 +52,9 @@ public class DataCountTest {
 
     @Test
     public void testBusSegmentCount() throws Exception {
-        Path dataPath = Paths.get(DATA_DIR);
-        
         // Load bus segments
         BusSegmentReader segmentReader = new BusSegmentReader();
-        List<BusSegment> segments = segmentReader.read(dataPath.resolve("bus_segments.csv"));
+        List<BusSegment> segments = segmentReader.read(DATA_DIR.resolve("bus_segments.csv"));
         
         assertEquals(9550, segments.size(), 
             "Expected 9,550 bus segments");
@@ -68,11 +62,9 @@ public class DataCountTest {
 
     @Test
     public void testTransitLineCount() throws Exception {
-        Path dataPath = Paths.get(DATA_DIR);
-        
         // Load transit line segments
         TransitLineReader lineReader = new TransitLineReader();
-        List<TransitSegment> segments = lineReader.read(dataPath.resolve("transit_lines.csv"));
+        List<TransitSegment> segments = lineReader.read(DATA_DIR.resolve("transit_lines.csv"));
         
         // Should load exactly 98 transit line segments (stations)
         assertEquals(98, segments.size(), 
@@ -81,11 +73,9 @@ public class DataCountTest {
 
     @Test
     public void testWalkLinkCount() throws Exception {
-        Path dataPath = Paths.get(DATA_DIR);
-        
         // Load walk links
         WalkLinkReader walkLinkReader = new WalkLinkReader();
-        List<WalkLink> walkLinks = walkLinkReader.read(dataPath.resolve("walk_links.csv"));
+        List<WalkLink> walkLinks = walkLinkReader.read(DATA_DIR.resolve("walk_links.csv"));
         
         assertEquals(25865, walkLinks.size(), 
             "Expected 25,865 walk links (including those with empty names)");
@@ -93,11 +83,9 @@ public class DataCountTest {
 
     @Test
     public void testGraphStateCount() throws Exception {
-        Path dataPath = Paths.get(DATA_DIR);
-        
         // Build complete graph
         GraphBuilder builder = new GraphBuilder();
-        TransitGraph graph = builder.build(dataPath);
+        TransitGraph graph = builder.build(DATA_DIR);
         
         assertEquals(13895, graph.getStateCount(), 
             "Expected 13,895 states (nodes) in the graph");
@@ -105,11 +93,9 @@ public class DataCountTest {
 
     @Test
     public void testGraphEdgeCount() throws Exception {
-        Path dataPath = Paths.get(DATA_DIR);
-        
         // Build complete graph
         GraphBuilder builder = new GraphBuilder();
-        TransitGraph graph = builder.build(dataPath);
+        TransitGraph graph = builder.build(DATA_DIR);
         
         assertEquals(82160, graph.getEdgeCount(), 
             "Expected 82,160 edges in the graph");
@@ -117,11 +103,9 @@ public class DataCountTest {
     
     @Test
     public void testGraphStateBreakdown() throws Exception {
-        Path dataPath = Paths.get(DATA_DIR);
-        
         // Build complete graph
         GraphBuilder builder = new GraphBuilder();
-        TransitGraph graph = builder.build(dataPath);
+        TransitGraph graph = builder.build(DATA_DIR);
         
         // Count states by type
         int walkStates = 0;
@@ -152,11 +136,9 @@ public class DataCountTest {
     
     @Test
     public void testGraphEdgeBreakdown() throws Exception {
-        Path dataPath = Paths.get(DATA_DIR);
-        
         // Build complete graph
         GraphBuilder builder = new GraphBuilder();
-        TransitGraph graph = builder.build(dataPath);
+        TransitGraph graph = builder.build(DATA_DIR);
         
         // Count edges by kind
         int rideEdges = 0;

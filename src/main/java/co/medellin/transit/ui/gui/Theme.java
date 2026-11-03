@@ -1,137 +1,120 @@
 package co.medellin.transit.ui.gui;
 
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JComponent;
+import co.medellin.transit.ui.gui.model.TransitMode;
+
 import javax.swing.UIManager;
-import javax.swing.border.Border;
 import java.awt.Color;
-import java.awt.Cursor;
 import java.awt.Font;
-import java.awt.GraphicsEnvironment;
-import java.text.NumberFormat;
-import java.util.Arrays;
-import java.util.Locale;
 
 /**
- * Colors, fonts and small helpers shared by every screen of the window.
+ * The design system in code: every color, type style and spacing of
+ * DESIGN.md (sections 2 to 4). No other class creates colors or fonts.
  */
-final class Theme {
+public final class Theme {
 
-    static final Color PRIMARY = new Color(0x0B7A3E);
-    static final Color PRIMARY_DARK = new Color(0x075A2D);
-    static final Color PRIMARY_LIGHT = new Color(0xE6F4EC);
-    static final Color ACCENT = new Color(0xF2B705);
-    static final Color BACKGROUND = new Color(0xF5F7F6);
-    static final Color SURFACE = Color.WHITE;
-    static final Color TEXT = new Color(0x1C2321);
-    static final Color TEXT_MUTED = new Color(0x5F6B66);
-    static final Color BORDER = new Color(0xD9E0DC);
-    static final Color ERROR = new Color(0xB3261E);
-    static final Color ERROR_LIGHT = new Color(0xFCEBEA);
-    static final Color WALK = new Color(0x7A8580);
-    static final Color ALIGHT = new Color(0x1F4E79);
+    // 2.1 Base
+    public static final Color PAPER = new Color(0xF6F5F1);
+    public static final Color SURFACE = new Color(0xFFFFFF);
+    public static final Color INK = new Color(0x16191D);
+    public static final Color INK_2 = new Color(0x4A5058);
+    public static final Color RULE = new Color(0xD8D6CF);
+    public static final Color ERROR = new Color(0xB42318);
 
-    private static final String FAMILY = pickFamily();
+    // 2.2 Modes: badge fill, text on badge, stroke on the map
+    public static final Color METRO = new Color(0x1F4FA3);
+    public static final Color METROPLUS = new Color(0x1B7A4B);
+    public static final Color CABLE = new Color(0xB8480F);
+    public static final Color TRAM = new Color(0x9B1B47);
+    public static final Color BUS_FILL = new Color(0xE8B000);
+    public static final Color BUS_STROKE = new Color(0x9C6C00);
+    public static final Color WALK = new Color(0x6B7077);
+
+    /** Every color the interface may use, for the consistency test. */
+    public static final Color[] PALETTE = {PAPER, SURFACE, INK, INK_2, RULE, ERROR,
+            METRO, METROPLUS, CABLE, TRAM, BUS_FILL, BUS_STROKE, WALK};
+
+    // 4. Spacing (8 px base)
+    public static final int S1 = 4;
+    public static final int S2 = 8;
+    public static final int S3 = 16;
+    public static final int S4 = 24;
+    public static final int S5 = 32;
+    public static final int RADIUS = 2;
+    public static final int MIN_TARGET = 40;
 
     private Theme() {
     }
 
-    private static String pickFamily() {
-        try {
-            String[] installed = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
-            for (String wanted : new String[]{"Segoe UI", "Helvetica Neue", "Ubuntu", "DejaVu Sans"}) {
-                if (Arrays.asList(installed).contains(wanted)) {
-                    return wanted;
-                }
-            }
-        } catch (RuntimeException ignored) {
-            // Fall back to the logical font below.
-        }
-        return Font.SANS_SERIF;
+    public static Color badgeFill(TransitMode mode) {
+        return switch (mode) {
+            case METRO -> METRO;
+            case METROPLUS -> METROPLUS;
+            case CABLE -> CABLE;
+            case TRAM -> TRAM;
+            case BUS -> BUS_FILL;
+            case WALK -> WALK;
+        };
     }
 
-    static Font font(int style, float size) {
-        return new Font(FAMILY, style, Math.round(size));
+    public static Color badgeText(TransitMode mode) {
+        return mode == TransitMode.BUS ? INK : SURFACE;
     }
 
-    /**
-     * Uses the cross-platform look and feel, so the window looks the same on
-     * Windows, macOS and Linux and our button colors are respected.
-     */
-    static void installLookAndFeel() {
+    public static Color stroke(TransitMode mode) {
+        return mode == TransitMode.BUS ? BUS_STROKE : badgeFill(mode);
+    }
+
+    // 3. Type styles
+    public static Font figure() {
+        return Fonts.mono(40f);
+    }
+
+    public static Font figureSmall() {
+        return Fonts.mono(18f);
+    }
+
+    public static Font title() {
+        return Fonts.sans(Fonts.SEMIBOLD, 20f);
+    }
+
+    public static Font body() {
+        return Fonts.sans(Fonts.REGULAR, 15f);
+    }
+
+    public static Font label() {
+        return Fonts.sans(Fonts.MEDIUM, 12f);
+    }
+
+    public static Font hint() {
+        return Fonts.sans(Fonts.REGULAR, 13f);
+    }
+
+    public static Font badge() {
+        return Fonts.sans(Fonts.SEMIBOLD, 13f);
+    }
+
+    public static Font brand() {
+        return Fonts.sans(Fonts.SEMIBOLD, 18f);
+    }
+
+    public static Font button() {
+        return Fonts.sans(Fonts.MEDIUM, 15f);
+    }
+
+    /** Cross-platform look and feel, so our own painting is identical on every OS. */
+    public static void install() {
         try {
             UIManager.put("swing.boldMetal", Boolean.FALSE);
             UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
-            UIManager.put("OptionPane.messageFont", font(Font.PLAIN, 14));
-            UIManager.put("OptionPane.buttonFont", font(Font.PLAIN, 13));
         } catch (Exception ignored) {
-            // The default look and feel works too.
+            // The default look and feel is fine too.
         }
-    }
-
-    static Border cardBorder() {
-        return BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(BORDER, 1, true),
-                BorderFactory.createEmptyBorder(16, 18, 16, 18));
-    }
-
-    static JButton primaryButton(String text) {
-        JButton button = new JButton(text);
-        styleButton(button, PRIMARY, Color.WHITE);
-        return button;
-    }
-
-    static JButton secondaryButton(String text) {
-        JButton button = new JButton(text);
-        styleButton(button, SURFACE, PRIMARY_DARK);
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(PRIMARY, 1, true),
-                BorderFactory.createEmptyBorder(9, 18, 9, 18)));
-        return button;
-    }
-
-    private static void styleButton(JButton button, Color background, Color foreground) {
-        button.setFont(font(Font.BOLD, 14));
-        button.setBackground(background);
-        button.setForeground(foreground);
-        button.setOpaque(true);
-        button.setContentAreaFilled(true);
-        button.setFocusPainted(false);
-        button.setBorderPainted(true);
-        button.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-    }
-
-    static void muted(JComponent component, float size) {
-        component.setFont(font(Font.PLAIN, size));
-        component.setForeground(TEXT_MUTED);
-    }
-
-    /** Formats pesos the Colombian way: 3800 becomes "$3.800". */
-    static String pesos(int amount) {
-        NumberFormat format = NumberFormat.getIntegerInstance(Locale.forLanguageTag("es-CO"));
-        format.setGroupingUsed(true);
-        return "$" + format.format(amount);
-    }
-
-    /**
-     * Formats seconds as minutes, or hours and minutes past one hour.
-     * Rounds up, like the console output and the step descriptions.
-     */
-    static String duration(int seconds) {
-        int minutes = (int) Math.ceil(seconds / 60.0);
-        if (minutes < 60) {
-            return minutes + " min";
-        }
-        return (minutes / 60) + " h " + (minutes % 60) + " min";
-    }
-
-    static String meters(double meters) {
-        long rounded = Math.round(meters);
-        if (rounded < 1000) {
-            return rounded + " m";
-        }
-        return String.format(Locale.forLanguageTag("es-CO"), "%.1f km", rounded / 1000.0);
+        Fonts.register();
+        UIManager.put("Panel.background", PAPER);
+        UIManager.put("OptionPane.background", PAPER);
+        UIManager.put("OptionPane.messageFont", body());
+        UIManager.put("OptionPane.buttonFont", button());
+        UIManager.put("ScrollBar.width", 10);
+        UIManager.put("ToolTip.font", hint());
     }
 }

@@ -143,9 +143,9 @@ class PreservationTest {
         Path jsonFile = testDataDir.resolve("stops_attributes_coords.json");
         String jsonContent = "{\n" +
             "  \"features\": [\n" +
-            "    {\"attributes\": {\"OBJECTID\": 1001, \"nombre\": \"Stop A\", \"latitud\": 6.234, \"longitud\": -75.567}},\n" +
-            "    {\"attributes\": {\"OBJECTID\": 1002, \"nombre\": \"Stop B\", \"latitud\": 6.235, \"longitud\": -75.568}},\n" +
-            "    {\"attributes\": {\"OBJECTID\": 1003, \"nombre\": \"Stop C\", \"latitud\": 6.236, \"longitud\": -75.569}}\n" +
+            "    {\"attributes\": {\"OBJECTID\": 1001, \"direccion\": \"Stop A\", \"latitud\": 6.234, \"longitud\": -75.567}},\n" +
+            "    {\"attributes\": {\"OBJECTID\": 1002, \"direccion\": \"Stop B\", \"latitud\": 6.235, \"longitud\": -75.568}},\n" +
+            "    {\"attributes\": {\"OBJECTID\": 1003, \"direccion\": \"Stop C\", \"latitud\": 6.236, \"longitud\": -75.569}}\n" +
             "  ]\n" +
             "}\n";
         Files.writeString(jsonFile, jsonContent);

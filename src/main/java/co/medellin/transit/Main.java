@@ -84,11 +84,6 @@ public class Main {
                 }
             }
             args = positional.toArray(new String[0]);
-
-            // In graphical mode, show the home screen right away while the graph loads
-            if (!consoleMode) {
-                window = MainWindow.open();
-            }
             
             // Track startup time and memory for performance monitoring
             long startTime = System.nanoTime();
@@ -108,6 +103,11 @@ public class Main {
                 dataDirPath = loadDataDirectoryFromConfig();
             }
             Path dataDir = Paths.get(dataDirPath);
+
+            // In graphical mode, show the home screen right away while the graph loads
+            if (!consoleMode) {
+                window = MainWindow.open(dataDir);
+            }
             
             // Validate data directory exists before attempting to load
             if (!Files.exists(dataDir)) {

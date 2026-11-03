@@ -176,21 +176,21 @@ class PaginationTest {
     /**
      * Helper method to create a simple stop JSON file.
      */
-    private void createStopFile(Path path, int objectId, String name) throws IOException {
+    private void createStopFile(Path path, int objectId, String direccion) throws IOException {
         String content = String.format(
             "{\n" +
             "  \"features\": [\n" +
             "    {\n" +
             "      \"attributes\": {\n" +
             "        \"OBJECTID\": %d,\n" +
-            "        \"nombre\": \"%s\",\n" +
+            "        \"direccion\": \"%s\",\n" +
             "        \"latitud\": 6.234,\n" +
             "        \"longitud\": -75.567\n" +
             "      }\n" +
             "    }\n" +
             "  ]\n" +
             "}\n",
-            objectId, name
+            objectId, direccion
         );
         Files.writeString(path, content);
     }

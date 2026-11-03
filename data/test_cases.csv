@@ -1,0 +1,16 @@
+origin,destination,minutes,cost_cop,transfers,vehicles
+CL 50 53-48,CR 70 x CL 48,21,3800,0,bus:191
+CL 10 43A-20,CL 77 65-30,34,3820,0,metro:A
+CR 80 32-15,CL 51 46-10,31,3820,0,brt:2
+CL 30 65-10,CL 30 66-20,9,0,0,walk
+CL 44 80-10,CL 33 65-20,24,3800,0,bus:195
+CR 82 x CL 51B,CL 57A 30-87,46,11420,2,bus:243 > metro:B > bus:91
+CL 48EE 99D-,CL 65 x CR 108,18,3820,0,cable_car:J
+CR 83 89B-,CR 23B 84B-62,76,11420,3,bus:289 > cable_car:P > cable_car:K > bus:57
+CR 143A x CL 60C,CL 59A x CR 35,76,11420,3,bus:255P > cable_car:J > metro:B > bus:90
+CL 67 43-26,CL 71 65-173,28,4715,1,brt:1 > bus:254i
+CL 62 131-151,CL 50 56-26,54,4715,1,bus:C23i DERECHA > metro:B
+CR 43A 8-46,CR 120B 48B-98,66,8515,3,bus:304 > metro:A > metro:B > bus:C23i
+CL 30A x CR 82A,CL 43 x CR 115A,48,7600,1,bus:301 > bus:C23_Alterna
+CR 97 x CL 67,CL 12 Sur x CR 50,61,4715,3,bus:250Aii > cable_car:J > metro:B > metro:A
+CR 8A x CL 52,CL 54 17B-77,12,3800,0,bus:94

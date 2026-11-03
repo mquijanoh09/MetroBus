@@ -1,0 +1,234 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Write bug condition exploration tests": [
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793584782142
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793584792155
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793585158132
+      }
+    ],
+    "2. Write preservation property tests (BEFORE implementing fixes)": [
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793584782314
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793585165663
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793585430583
+      }
+    ],
+    "3.1 Fix ArcGIS JSON parsing for nested geometry": [
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793584782389
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793585448951
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793586128348
+      }
+    ],
+    "3.2 Fix JSON file discovery for paginated files": [
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793584782468
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793585449651
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793586130665
+      }
+    ],
+    "3.3 Create specialized CSV readers for raw transit data": [
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793584782534
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793585451697
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793586129060
+      }
+    ],
+    "3.4 Update GraphBuilder to construct graph from raw transit data": [
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793584782607
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793586135767
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793586484638
+      }
+    ],
+    "3.5 Fix Main configuration loading": [
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793584782685
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793585451825
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793586129795
+      }
+    ],
+    "3.6 Fix ReferenceTestSuite execution and assertions": [
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793584782801
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793585452519
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793586127408
+      }
+    ],
+    "3.7 Verify bug condition exploration test now passes": [
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793584782867
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793586499740
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793586623771
+      }
+    ],
+    "3.8 Verify preservation tests still pass": [
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793584782934
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793586500420
+      },
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793586624840
+      }
+    ],
+    "4. Checkpoint - Ensure all tests pass and verify integration": [
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793586630165
+      },
+      {
+        "executionId": "73d9f596-e92e-446d-a50e-3225a4718bc7",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793589459732
+      },
+      {
+        "executionId": "82c36acf-242d-42c7-aee4-8718b4cf0aa0",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793590811518
+      },
+      {
+        "executionId": "82c36acf-242d-42c7-aee4-8718b4cf0aa0",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793590815371
+      },
+      {
+        "executionId": "82c36acf-242d-42c7-aee4-8718b4cf0aa0",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793591693592
+      },
+      {
+        "executionId": "ce361518-83bf-4ca9-aa8b-37609106e24f",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793591930087
+      },
+      {
+        "executionId": "ce361518-83bf-4ca9-aa8b-37609106e24f",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793591934132
+      },
+      {
+        "executionId": "df2cbee8-4442-4e92-869e-85477883d11e",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793594182204
+      },
+      {
+        "executionId": "df2cbee8-4442-4e92-869e-85477883d11e",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793594186598
+      },
+      {
+        "executionId": "df2cbee8-4442-4e92-869e-85477883d11e",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793595089717
+      }
+    ],
+    "3. Fix data loading issues": [
+      {
+        "executionId": "8c040d3f-e8d7-449c-a7bb-745fa960f9f8",
+        "chatSessionId": "sess_5e598bea-a8d2-4792-94e3-a47ff68e6f8a",
+        "timestamp": 1793586624879
+      }
+    ]
+  }
+}

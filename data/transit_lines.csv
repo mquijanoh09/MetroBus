@@ -1,0 +1,99 @@
+line,mode,order,station,lat,lon,dist_to_next_m,sec_to_next
+A,metro,1,Niquía,6.337817,-75.544312,1288,125
+A,metro,2,Bello,6.330538,-75.553381,1705,166
+A,metro,3,Madera,6.31532,-75.555282,1706,166
+A,metro,4,Acevedo,6.300272,-75.558308,1314,128
+A,metro,5,Tricentenario,6.290304,-75.564698,1430,139
+A,metro,6,Caribe,6.278329,-75.569424,1070,104
+A,metro,7,Universidad,6.269412,-75.565794,666,65
+A,metro,8,Hospital,6.263937,-75.563348,847,82
+A,metro,9,Prado,6.25685,-75.566163,742,72
+A,metro,10,Parque Berrío,6.250504,-75.568222,403,39
+A,metro,11,San Antonio,6.247197,-75.56971,507,49
+A,metro,12,Alpujarra,6.242961,-75.571409,541,53
+A,metro,13,Exposiciones,6.23842,-75.573161,907,88
+A,metro,14,Industriales,6.230615,-75.575547,2009,195
+A,metro,15,Poblado,6.212713,-75.578018,2072,202
+A,metro,16,Aguacatala,6.19443,-75.581625,989,96
+A,metro,17,Ayurá,6.18647,-75.585616,1822,177
+A,metro,18,Envigado,6.174687,-75.597069,1702,166
+A,metro,19,Itagüí,6.16288,-75.606866,1180,115
+A,metro,20,Sabaneta,6.157725,-75.616197,1252,122
+A,metro,21,La Estrella,6.152747,-75.626353,,
+B,metro,1,San Antonio,6.247197,-75.56971,636,62
+B,metro,2,Cisneros,6.249054,-75.575152,965,94
+B,metro,3,Suramericana,6.252978,-75.582943,591,58
+B,metro,4,Estadio,6.253342,-75.588278,1204,117
+B,metro,5,Floresta,6.258716,-75.597736,674,66
+B,metro,6,Santa Lucía,6.258027,-75.603794,1075,105
+B,metro,7,San Javier,6.256649,-75.613419,,
+T-A,tram,1,San Antonio,6.247197,-75.56971,478,115
+T-A,tram,2,San José,6.247329,-75.565386,422,101
+T-A,tram,3,Pabellón del Agua EPM,6.245589,-75.561993,399,96
+T-A,tram,4,Bicentenario,6.243959,-75.558779,609,146
+T-A,tram,5,Buenos Aires,6.241403,-75.553907,543,130
+T-A,tram,6,Miraflores,6.24138,-75.548991,494,119
+T-A,tram,7,Loyola,6.239066,-75.545176,549,132
+T-A,tram,8,Alejandro Echavarría,6.235502,-75.541733,315,76
+T-A,tram,9,Oriente,6.23315,-75.54014,,
+K,cable_car,1,Acevedo,6.300272,-75.558308,837,167
+K,cable_car,2,Andalucía,6.296272,-75.551897,432,86
+K,cable_car,3,Popular,6.295128,-75.548161,750,150
+K,cable_car,4,Santo Domingo Savio,6.293138,-75.541678,,
+L,cable_car,1,Santo Domingo Savio,6.293138,-75.541678,4468,894
+L,cable_car,2,Arví,6.281546,-75.502972,,
+J,cable_car,1,San Javier,6.256649,-75.613419,1004,201
+J,cable_car,2,Juan XXIII,6.265677,-75.613703,1077,215
+J,cable_car,3,Vallejuelos,6.275357,-75.614017,638,128
+J,cable_car,4,La Aurora,6.281093,-75.614203,,
+H,cable_car,1,Oriente,6.23315,-75.54014,570,114
+H,cable_car,2,Las Torres,6.236645,-75.536372,873,175
+H,cable_car,3,Villa Sierra,6.234875,-75.528679,,
+M,cable_car,1,Miraflores,6.24138,-75.548991,660,132
+M,cable_car,2,El Pinal,6.245263,-75.544476,429,86
+M,cable_car,3,13 de Noviembre,6.247615,-75.541395,,
+P,cable_car,1,Acevedo,6.299549,-75.558808,976,195
+P,cable_car,2,Sena-Pedregal,6.301883,-75.567319,989,198
+P,cable_car,3,Doce de Octubre,6.304248,-75.575947,732,146
+P,cable_car,4,El Progreso,6.305999,-75.582334,,
+1,brt,1,Universidad de Medellín,6.230799,-75.609308,459,83
+1,brt,2,Los Alpes,6.231055,-75.605167,458,82
+1,brt,3,La Palma,6.231145,-75.601026,473,85
+1,brt,4,Parque Belén,6.231363,-75.596749,639,115
+1,brt,5,Rosales,6.231564,-75.590969,487,88
+1,brt,6,Fátima,6.231681,-75.586563,498,90
+1,brt,7,Nutibara,6.231804,-75.582056,617,111
+1,brt,8,Industriales,6.230488,-75.57663,1472,265
+1,brt,9,Plaza Mayor,6.24366,-75.575345,801,144
+1,brt,10,Cisneros-Moda,6.250855,-75.575077,622,112
+1,brt,11,Minorista,6.256125,-75.57318,677,122
+1,brt,12,Chagualo,6.260725,-75.56917,396,71
+1,brt,13,RutaN-UdeA,6.263939,-75.567621,825,148
+1,brt,14,San Pedro,6.263442,-75.560178,499,90
+1,brt,15,Palos Verdes,6.262094,-75.555874,627,113
+1,brt,16,Gardel,6.267665,-75.555011,630,113
+1,brt,17,Manrique,6.273253,-75.554053,580,104
+1,brt,18,Las Esmeraldas,6.27839,-75.553144,505,91
+1,brt,19,Berlín,6.28293,-75.552908,481,87
+1,brt,20,Parque Aranjuez,6.285199,-75.556611,,
+2,brt,1,Universidad de Medellín,6.230799,-75.609308,459,83
+2,brt,2,Los Alpes,6.231055,-75.605167,458,82
+2,brt,3,La Palma,6.231145,-75.601026,473,85
+2,brt,4,Parque Belén,6.231363,-75.596749,639,115
+2,brt,5,Rosales,6.231564,-75.590969,487,88
+2,brt,6,Fátima,6.231681,-75.586563,498,90
+2,brt,7,Nutibara,6.231804,-75.582056,617,111
+2,brt,8,Industriales,6.230488,-75.57663,655,118
+2,brt,9,Barrio Colombia,6.228575,-75.571028,574,103
+2,brt,10,San Diego,6.233649,-75.570072,760,137
+2,brt,11,Colón,6.240485,-75.569887,748,135
+2,brt,12,San José,6.246409,-75.566676,431,78
+2,brt,13,La Playa,6.249603,-75.564469,437,79
+2,brt,14,Catedral Metropolitana,6.253022,-75.562521,719,129
+2,brt,15,Prado A,6.258797,-75.559588,608,109
+2,brt,16,Palos Verdes B,6.263256,-75.556403,514,93
+2,brt,17,Gardel,6.267665,-75.555011,630,113
+2,brt,18,Manrique,6.273253,-75.554053,580,104
+2,brt,19,Las Esmeraldas,6.27839,-75.553144,505,91
+2,brt,20,Berlín,6.28293,-75.552908,481,87
+2,brt,21,Parque Aranjuez,6.285199,-75.556611,,

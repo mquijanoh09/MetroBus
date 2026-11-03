@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Run mvn test on save",
+  "description": "When a Java file under src/ is saved, run mvn test and report the real result.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.java"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A Java file was just saved. Run `mvn test` from the project root. Report the exact 'Tests run: N, Failures: F, Errors: E, Skipped: S' line from the output and list each failing test with its message. If there are failures caused by your last change, fix the code (never the test's expected values) before continuing."
+  }
+}

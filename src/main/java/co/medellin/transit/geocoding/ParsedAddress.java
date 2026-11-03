@@ -60,6 +60,40 @@ public class ParsedAddress {
         return cardinal;
     }
     
+    /**
+     * Gets the calle number for geocoding (applies prototype transformation).
+     * - If street type is CALLE or DIAGONAL: returns primaryNumber
+     * - If street type is CARRERA or TRANSVERSAL: returns secondaryNumber
+     * 
+     * @return the calle number
+     */
+    public double getCalleNumber() {
+        // Prototype STREET dict: CL/CALLE/DG/DIAGONAL -> 'CL' means primary is calle
+        // CR/KR/CRA/CARRERA/TV/TRANSVERSAL -> 'CR' means secondary is calle
+        return switch (streetType) {
+            case CALLE, DIAGONAL -> primaryNumber;
+            case CARRERA, TRANSVERSAL -> secondaryNumber;
+            case CIRCULAR -> primaryNumber; // fallback, though CQ should be rejected
+        };
+    }
+    
+    /**
+     * Gets the carrera number for geocoding (applies prototype transformation).
+     * - If street type is CALLE or DIAGONAL: returns secondaryNumber
+     * - If street type is CARRERA or TRANSVERSAL: returns primaryNumber
+     * 
+     * @return the carrera number
+     */
+    public double getCarreraNumber() {
+        // Prototype STREET dict: CL/CALLE/DG/DIAGONAL -> 'CL' means secondary is carrera
+        // CR/KR/CRA/CARRERA/TV/TRANSVERSAL -> 'CR' means primary is carrera
+        return switch (streetType) {
+            case CALLE, DIAGONAL -> secondaryNumber;
+            case CARRERA, TRANSVERSAL -> primaryNumber;
+            case CIRCULAR -> secondaryNumber; // fallback
+        };
+    }
+    
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();

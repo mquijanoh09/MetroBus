@@ -1,9 +1,16 @@
 package co.medellin.transit.geocoding;
 
+import co.medellin.transit.data.StopArcGisReader;
 import co.medellin.transit.model.Coordinate;
+import co.medellin.transit.model.Stop;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -185,7 +192,7 @@ class AddressLocatorTest {
     
     @Test
     void testCircularStreetType() {
-        // Circular addresses should be handled
+        // Circular addresses cannot be located (algorithm.md line 136)
         ParsedAddress address = new ParsedAddress(
             StreetType.CIRCULAR,
             50.0,
@@ -195,7 +202,7 @@ class AddressLocatorTest {
         );
         
         Optional<Coordinate> result = locator.locate(address);
-        assertTrue(result.isPresent(), "Circular street type should be locatable");
+        assertFalse(result.isPresent(), "Circular addresses should not be locatable");
     }
     
     @Test
@@ -404,5 +411,59 @@ class AddressLocatorTest {
         // Carrera 43 < Carrera 50, so should be east (higher longitude)
         assertTrue(result.get().getLon() > c50.get().getLon(), 
                   "Carrera 43 should be east of Carrera 50 (higher longitude)");
+    }
+
+    @Test
+    void testReferenceTableSize() throws IOException {
+        // Load stops from real data
+        Path dataDir = Paths.get("data");
+        StopArcGisReader reader = new StopArcGisReader();
+        List<Stop> stops = reader.readPaginated(dataDir, "stops", ".json");
+        
+        assertEquals(3590, stops.size(), "Should have 3,590 unique stops");
+        
+        // Build reference table
+        AddressLocator locatorWithStops = new AddressLocator(stops);
+        
+        // Count how many addresses can be parsed and located
+        AddressParser parser = new AddressParser();
+        int parseableCount = 0;
+        int locatableCount = 0;
+        List<String> unparsedAddresses = new ArrayList<>();
+        
+        for (Stop stop : stops) {
+            String address = stop.getAddress();
+            Optional<ParsedAddress> parsed = parser.parse(address);
+            if (parsed.isPresent()) {
+                parseableCount++;
+                
+                // Also check if it can be located
+                Optional<Coordinate> located = locatorWithStops.locate(parsed.get());
+                if (located.isPresent()) {
+                    locatableCount++;
+                }
+            } else {
+                unparsedAddresses.add(address);
+            }
+        }
+        
+        // Print unparsed addresses for analysis
+        if (!unparsedAddresses.isEmpty()) {
+            System.out.println("\n=== UNPARSED ADDRESSES (" + unparsedAddresses.size() + ") ===");
+            for (String addr : unparsedAddresses) {
+                System.out.println("  " + addr);
+            }
+            System.out.println("=== END UNPARSED ADDRESSES ===\n");
+        }
+        
+        // Per requirements.md section 2: at least 3,481 stops (97% of 3,590) should be parseable
+        assertTrue(parseableCount >= 3481, 
+            String.format("Reference table should have ≥ 3,481 parseable addresses, found %d (%.1f%%)",
+                parseableCount, 100.0 * parseableCount / stops.size()));
+        
+        System.out.println(String.format("Reference table coverage: %d / %d stops parseable (%.1f%%)",
+            parseableCount, stops.size(), 100.0 * parseableCount / stops.size()));
+        System.out.println(String.format("  Locatable (within 6 units): %d (%.1f%%)",
+            locatableCount, 100.0 * locatableCount / stops.size()));
     }
 }

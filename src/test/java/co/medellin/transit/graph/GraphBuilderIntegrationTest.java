@@ -47,8 +47,8 @@ class GraphBuilderIntegrationTest {
         // Create bus segments CSV
         String busSegmentsCsv = """
 route_id,direction,from_stop_id,to_stop_id,from_seq,to_seq,straight_m,road_m,used_m,method
-C101,0,100,101,1,2,1000,1200,1150,road
-C101,0,101,102,2,3,1100,1300,1250,road
+C101,outbound,100,101,1,2,1000,1200,1150,road
+C101,outbound,101,102,2,3,1100,1300,1250,road
 """;
         Files.writeString(tempDir.resolve("bus_segments.csv"), busSegmentsCsv);
         
@@ -59,8 +59,8 @@ C101,0,101,102,2,3,1100,1300,1250,road
         // Create walk links CSV
         String walkLinksCsv = """
 place_a,name_a,place_b,name_b,kind,straight_m,walk_sec
-100,Parada A,101,Parada B,stop-to-stop,1000,800
-101,Parada B,102,Parada C,stop-to-stop,1100,880
+STOP:100,Parada A,STOP:101,Parada B,stop_stop,1000,800
+STOP:101,Parada B,STOP:102,Parada C,stop_stop,1100,880
 """;
         Files.writeString(tempDir.resolve("walk_links.csv"), walkLinksCsv);
         
@@ -73,17 +73,17 @@ place_a,name_a,place_b,name_b,kind,straight_m,walk_sec
         assertTrue(graph.getStateCount() > 0, "Graph should have states");
         assertTrue(graph.getEdgeCount() > 0, "Graph should have edges");
         
-        // We should have:
+        // Expected states:
         // - 3 WALK states (one per stop)
-        // - 3 BUS_STOP states (one per stop on route C101 direction 0)
+        // - 3 BUS_STOP states (one per stop on route C101, outbound direction)
         // Total: 6 states
         assertEquals(6, graph.getStateCount(), "Should have 6 states");
         
-        // We should have:
-        // - 2 RIDE edges (bus segments)
-        // - 3 BOARD edges (WALK -> BUS_STOP for each stop)
-        // - 3 ALIGHT edges (BUS_STOP -> WALK for each stop)
-        // - 4 WALK edges (2 bidirectional walk links)
+        // Expected edges:
+        // - 2 RIDE edges (from bus segments: 100→101, 101→102)
+        // - 3 BOARD edges (WALK → BUS_STOP for each stop on route)
+        // - 3 ALIGHT edges (BUS_STOP → WALK for each stop on route)
+        // - 4 WALK edges (2 walk links × 2 directions)
         // Total: 12 edges
         assertEquals(12, graph.getEdgeCount(), "Should have 12 edges");
         
@@ -140,16 +140,18 @@ A,Metro,2,Madera,6.32,-75.56,1700,100
         assertTrue(graph.getStateCount() > 0, "Graph should have states");
         assertTrue(graph.getEdgeCount() > 0, "Graph should have edges");
         
-        // We should have:
-        // - 0 WALK states (no stops)
-        // - 3 METRO_STATION states (one per station on line A)
-        // Total: 3 states
-        assertEquals(3, graph.getStateCount(), "Should have 3 states");
+        // Expected states (per graph-structure.md section 3.1):
+        // - 3 WALK states (one per unique station: Niquía, Bello, Madera)
+        // - 6 METRO_STATION states (3 stations × 2 directions: outbound + inbound)
+        // Total: 9 states
+        assertEquals(9, graph.getStateCount(), "Should have 9 states (3 WALK + 6 METRO_STATION)");
         
-        // We should have:
-        // - 2 RIDE edges (connecting 3 stations)
-        // Total: 2 edges
-        assertEquals(2, graph.getEdgeCount(), "Should have 2 edges");
+        // Expected edges (per graph-structure.md section 3.2, bidirectional transit):
+        // - 4 RIDE edges: 2 outbound (Niquía→Bello, Bello→Madera) + 2 inbound (Madera→Bello, Bello→Niquía)
+        // - 6 BOARD edges: 3 stations × 2 directions (WALK → METRO_STATION)
+        // - 6 ALIGHT edges: 3 stations × 2 directions (METRO_STATION → WALK)
+        // Total: 16 edges
+        assertEquals(16, graph.getEdgeCount(), "Should have 16 edges (4 RIDE + 6 BOARD + 6 ALIGHT)");
         
         System.out.println("✓ GraphBuilder transit lines test passed");
         System.out.println("  States: " + graph.getStateCount());

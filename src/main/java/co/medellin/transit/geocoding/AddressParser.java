@@ -5,48 +5,24 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Parses Medellín street addresses following the city's address system.
+ * Parses Medellín street addresses - port of reference/prototype.py parse_address() (lines 39-60).
  * 
- * <p>This parser implements the exact algorithm from the spec:
- * <ol>
- *   <li><b>Normalize</b>: Upper case, drop after comma, handle separators (#, No., N°), 
- *       collapse spaces, apply street type synonyms</li>
- *   <li><b>Parse with pattern</b>: STREET NUMBER[letters] [SUR] [X|CON|#] [STREET] NUMBER[letters]</li>
- *   <li><b>Letter handling</b>: Convert letter suffixes to fractional values (A=0.075, B=0.15, etc.)</li>
- *   <li><b>SUR handling</b>: SUR suffix makes numbers negative</li>
- * </ol>
- * 
- * <p>Valid examples:
- * <ul>
- *   <li>"cl 50 # 53-48" → CALLE 50, CARRERA 53, building 48</li>
- *   <li>"Calle 10 # 43A - 20" → CALLE 10, CARRERA 43.075, building 20</li>
- *   <li>"CL 12 Sur x CR 50" → CALLE -12 (SUR makes negative), CARRERA 50</li>
- *   <li>"CR 70 x CL 48 SUR" → CARRERA 70, CALLE -48</li>
- * </ul>
- * 
- * <p>Invalid examples that return empty:
- * <ul>
- *   <li>"hola mundo" - not an address format</li>
- *   <li>"VDA EL YOLOMBO" - rural addresses not supported</li>
- *   <li>"CL 900 x CR 900" - out of valid range</li>
- * </ul>
+ * Maintains ParsedAddress API (street types, cardinal) while using prototype logic for (calle, carrera) extraction.
  */
 public class AddressParser {
     
-    // Pattern to match the address format after normalization
-    // Matches: STREETTYPE NUMBER[LETTER] [SUR] [SEPARATOR] [STREETTYPE] NUMBER[LETTER] [SUR] [- NUMBER]
+    // Pattern matches prototype's regex with CIRCULAR/CQ and NORTE added, plus building number capture
+    // Use word boundary after number to prevent letter suffix being part of longer word
     private static final Pattern ADDRESS_PATTERN = Pattern.compile(
-        "^(CL|CALLE|CR|KR|CRA|CARRERA|DG|DIAGONAL|TV|TRANSVERSAL|CIRCULAR)\\s+" +
-        "([0-9]+)([A-Z]{1,2})?\\s*(SUR|NORTE)?\\s*" +
-        "(?:[#X]|CON|No\\.?|N°)\\s*" +
-        "(?:(CL|CALLE|CR|KR|CRA|CARRERA|DG|DIAGONAL|TV|TRANSVERSAL|CIRCULAR)\\s+)?" +
-        "([0-9]+)([A-Z]{1,2})?\\s*(SUR|NORTE)?\\s*" +
-        "(?:-\\s*([0-9]+))?$",
+        "(CL|CR|KR|CRA|DG|TV|CQ|CALLE|CARRERA|DIAGONAL|TRANSVERSAL|CIRCULAR|CIRCUNVALAR)\\.?\\s+" +
+        "(\\d+\\s?[A-Z]{0,3}(?:\\s+BIS)?)\\s*(SUR|ESTE|NORTE)?\\s*(?:X|CON|#)?\\s*" +
+        "(?:(CL|CR|KR|CRA|DG|TV|CQ|CALLE|CARRERA|CIRCULAR|CIRCUNVALAR)\\.?\\s+)?" +
+        "(\\d+\\s?[A-Z]{0,3})\\s*(SUR|ESTE|NORTE)?(?:\\s*-\\s*(\\d+))?(?:\\s|$)",
         Pattern.CASE_INSENSITIVE
     );
     
     /**
-     * Parses a Medellín address string into structured components.
+     * Parses a Medellín address string.
      * 
      * @param addressStr the address string to parse
      * @return ParsedAddress if valid, empty if invalid or unparseable
@@ -56,178 +32,181 @@ public class AddressParser {
             return Optional.empty();
         }
         
-        // Step 1: Normalize the address
-        String normalized = normalize(addressStr);
+        // Normalize: text before first comma (prototype line 52)
+        String d = addressStr.toUpperCase();
+        int commaIndex = d.indexOf(',');
+        if (commaIndex >= 0) {
+            d = d.substring(0, commaIndex);
+        }
         
-        // Step 2: Parse with regex pattern
-        Matcher matcher = ADDRESS_PATTERN.matcher(normalized);
-        if (!matcher.matches()) {
+        // Replace separators: '#', 'N°', 'NO.' all become ' # ' (prototype line 53)
+        d = d.replace("#", " # ");
+        d = d.replace("N°", " # ");
+        d = d.replace("NO.", " # ");
+        
+        // Collapse spaces (prototype line 54)
+        d = d.replaceAll("\\s+", " ").trim();
+        
+        System.err.println("DEBUG normalize: input='" + addressStr + "' after='" + d + "'");
+        
+        // Match pattern (prototype line 55-57)
+        Matcher m = ADDRESS_PATTERN.matcher(d);
+        if (!m.find()) {
             return Optional.empty();
         }
         
         try {
-            // Extract components
-            String streetType1Str = matcher.group(1);
-            String number1Str = matcher.group(2);
-            String letter1 = matcher.group(3);
-            String cardinal1Str = matcher.group(4);
+            String streetType1Str = m.group(1);
+            String number1Str = m.group(2);
+            String cardinal1Str = m.group(3);
+            String streetType2Str = m.group(4);  // may be null
+            String number2Str = m.group(5);
+            String cardinal2Str = m.group(6);
+            String buildingStr = m.group(7);  // building number (may be null)
             
-            String streetType2Str = matcher.group(5);  // May be null
-            String number2Str = matcher.group(6);
-            String letter2 = matcher.group(7);
-            String cardinal2Str = matcher.group(8);
+            // Debug: print what was captured
+            String matched = m.group(0);
+            System.err.println("DEBUG: d='" + d + "' matched='" + matched + "' number1Str='" + number1Str + "' number2Str='" + number2Str + "'");
             
-            String buildingStr = matcher.group(9);
+            // Validation: Detect if keywords (CON, SUR, ESTE, NORTE) were consumed into number
+            // "CL 50 CON CR 53" incorrectly captures "50 CON" because pattern allows \\d+\\s?[A-Z]{0,3}
+            // Strip these keywords from the end of number strings
+            if (number1Str.matches(".*\\s+(CON|SUR|ESTE|NORTE|NORT|EST|ON)\\s*$")) {
+                number1Str = number1Str.replaceAll("\\s+(CON|SUR|ESTE|NORTE|NORT|EST|ON)\\s*$", "").trim();
+            }
+            if (number2Str != null && number2Str.matches(".*\\s+(CON|SUR|ESTE|NORTE|NORT|EST|ON)\\s*$")) {
+                number2Str = number2Str.replaceAll("\\s+(CON|SUR|ESTE|NORTE|NORT|EST|ON)\\s*$", "").trim();
+            }
             
-            // Parse street types
-            StreetType streetType1 = StreetType.fromString(streetType1Str);
-            StreetType streetType2 = streetType2Str != null ? 
-                                     StreetType.fromString(streetType2Str) : null;
-            
-            if (streetType1 == null) {
+            // Validation: Check for incomplete addresses (separator with no secondary number)
+            // "CL 50 #" should be rejected - the '#' must be followed by a number
+            // Also reject if the matched portion is clearly incomplete
+            if (d.contains(" # ") && !matched.contains(" # ")) {
+                // Separator in input but not in match = incomplete
+                return Optional.empty();
+            }
+            if (d.contains(" X ") && !matched.contains(" X ")) {
+                return Optional.empty();
+            }
+            if (d.contains(" CON ") && !matched.contains(" CON ")) {
                 return Optional.empty();
             }
             
-            // Parse numbers with letter handling
-            double number1 = parseNumberWithLetter(number1Str, letter1);
-            double number2 = parseNumberWithLetter(number2Str, letter2);
-            
-            // Apply SUR handling (makes number negative)
-            if (cardinal1Str != null && cardinal1Str.toUpperCase().equals("SUR")) {
-                number1 = -Math.abs(number1);
-            }
-            if (cardinal2Str != null && cardinal2Str.toUpperCase().equals("SUR")) {
-                number2 = -Math.abs(number2);
+            // Map street types to CL or CR (prototype STREET dict, lines 41-42)
+            String prototypeKind1 = mapToPrototypeKind(streetType1Str);
+            if (prototypeKind1 == null) {
+                return Optional.empty();
             }
             
-            // Validate ranges (Medellín streets typically 1-200, reject extreme values)
-            if (Math.abs(number1) > 300 || Math.abs(number2) > 300) {
+            // Parse StreetType enum for API
+            StreetType streetType1 = StreetType.fromString(streetType1Str);
+            StreetType streetType2 = streetType2Str != null ? StreetType.fromString(streetType2Str) : null;
+            
+            // Parse numbers with letter handling (prototype's _number function, lines 45-48)
+            Double num1 = parseNumber(number1Str, "SUR".equals(cardinal1Str));
+            Double num2 = parseNumber(number2Str, "SUR".equals(cardinal2Str));
+            
+            if (num1 == null || num2 == null) {
+                return Optional.empty();
+            }
+            
+            // Validate: reject incomplete addresses (single number only)
+            // The pattern requires both numbers, so this is already validated by regex
+            
+            // Validate: reject out-of-range addresses (> 300 is unrealistic for Medellín)
+            if (Math.abs(num1) > 300 || Math.abs(num2) > 300) {
                 return Optional.empty();
             }
             
             // Parse building number
             Optional<Integer> buildingNumber = Optional.empty();
-            if (buildingStr != null) {
-                buildingNumber = Optional.of(Integer.parseInt(buildingStr));
+            if (buildingStr != null && !buildingStr.trim().isEmpty()) {
+                buildingNumber = Optional.of(Integer.parseInt(buildingStr.trim()));
             }
             
-            // Determine which is primary/secondary based on street types
-            // If both types specified: use them as given
-            // If only one type: assume the pattern is STREET1 num1 # num2
-            //   - If STREET1 is CALLE, then num2 is CARRERA
-            //   - If STREET1 is CARRERA, then num2 is CALLE
+            // Parse cardinals for API
+            Cardinal cardinal1 = Cardinal.fromString(cardinal1Str);
+            Cardinal cardinal2 = Cardinal.fromString(cardinal2Str);
+            Cardinal primaryCardinal = cardinal1 != null ? cardinal1 : cardinal2;
             
-            StreetType finalStreetType;
-            double primaryNumber;
-            double secondaryNumber;
-            Cardinal cardinal;
-            
-            if (streetType2 != null) {
-                // Explicit second street type - determine which is the "main" one
-                // Convention: CALLE typically comes first in the result
-                if (streetType1 == StreetType.CALLE || streetType1 == StreetType.CARRERA) {
-                    finalStreetType = streetType1;
-                    primaryNumber = number1;
-                    secondaryNumber = number2;
-                    cardinal = Cardinal.fromString(cardinal1Str);
-                } else {
-                    finalStreetType = streetType1;
-                    primaryNumber = number1;
-                    secondaryNumber = number2;
-                    cardinal = Cardinal.fromString(cardinal1Str);
-                }
-            } else {
-                // Only one street type specified
-                // Convention: "CL 50 # 53" means Calle 50, Carrera 53
-                finalStreetType = streetType1;
-                primaryNumber = number1;
-                secondaryNumber = number2;
-                cardinal = Cardinal.fromString(cardinal1Str);
-                if (cardinal == null) {
-                    cardinal = Cardinal.fromString(cardinal2Str);
-                }
-            }
-            
+            // For ParsedAddress API: store ORIGINAL numbers as primary/secondary
+            // The getCalleNumber()/getCarreraNumber() methods will apply prototype transformation
             return Optional.of(new ParsedAddress(
-                finalStreetType,
-                primaryNumber,
-                secondaryNumber,
+                streetType1,
+                num1,         // primaryNumber: the first number as parsed
+                num2,         // secondaryNumber: the second number as parsed  
                 buildingNumber,
-                Optional.ofNullable(cardinal)
+                Optional.ofNullable(primaryCardinal)
             ));
             
-        } catch (NumberFormatException e) {
+        } catch (Exception e) {
             return Optional.empty();
         }
     }
     
     /**
-     * Normalizes an address string according to the algorithm:
-     * - Convert to upper case
-     * - Drop everything after first comma
-     * - Treat #, No., N° as separators
-     * - Collapse multiple spaces to single space
-     * - Apply street type synonyms
-     * 
-     * @param address the raw address string
-     * @return normalized address string
+     * Maps street type to prototype's CL or CR (prototype STREET dict, lines 41-42).
+     * CL/CALLE/DG/DIAGONAL -> 'CL'
+     * CR/KR/CRA/CARRERA/TV/TRANSVERSAL -> 'CR'
+     * CIRCULAR/CQ/CIRCUNVALAR -> 'CL' (parsed but rejected in locate)
      */
-    private String normalize(String address) {
-        // Upper case
-        String normalized = address.toUpperCase();
+    private String mapToPrototypeKind(String streetType) {
+        if (streetType == null) return null;
+        String upper = streetType.toUpperCase();
         
-        // Drop everything after first comma
-        int commaIndex = normalized.indexOf(',');
-        if (commaIndex >= 0) {
-            normalized = normalized.substring(0, commaIndex);
-        }
-        
-        // Normalize separators: treat No., N° as #
-        normalized = normalized.replaceAll("No\\.?", "#");
-        normalized = normalized.replaceAll("N°", "#");
-        
-        // Normalize X and CON as intersections (keep as is, pattern handles them)
-        
-        // Collapse multiple spaces
-        normalized = normalized.replaceAll("\\s+", " ");
-        
-        // Trim
-        normalized = normalized.trim();
-
-        // Insert # before cross-street number if separator is missing
-        // Handles: "CL 50 53-48" -> "CL 50 # 53-48", "CL 48EE 99D-" -> "CL 48EE # 99D-0"
-        if (!normalized.contains("#") && !normalized.contains(" X ") && !normalized.contains(" CON ")) {
-            normalized = normalized.replaceAll(
-                "^((?:CL|CALLE|CR|KR|CRA|CARRERA|DG|DIAGONAL|TV|TRANSVERSAL|CIRCULAR)\\s+[0-9]+[A-Z]*(?:\\s+(?:SUR|NORTE))?)\\s+([0-9]+[A-Z]*)(.*)$",
-                "$1 # $2$3"
-            );
-            normalized = normalized.replaceAll("-\\s*$", "-0");
-        }
-
-        return normalized;
+        return switch (upper) {
+            case "CL", "CALLE", "DG", "DIAGONAL" -> "CL";
+            case "CR", "KR", "CRA", "CARRERA", "TV", "TRANSVERSAL" -> "CR";
+            case "CIRCULAR", "CQ", "CIRCUNVALAR" -> "CL";  // Parsed but rejected later
+            default -> null;
+        };
     }
     
     /**
-     * Parses a number with optional letter suffix.
-     * Letter suffixes are converted to fractional values:
-     * A = 0.075, B = 0.15, C = 0.225, etc. (each letter adds 0.075)
+     * Port of prototype's _number function (lines 45-48).
+     * Parses number with optional letter suffix.
+     * Letter fraction: 0.3 * (letter_index) / 4 for A-G
      * 
-     * @param numberStr the numeric part
-     * @param letter the letter suffix (may be null)
-     * @return the number with fractional component if letter present
+     * @param s the number string (may include letter and BIS)
+     * @param south true if SUR modifier present (makes negative)
+     * @return the number with fractional component, or null if invalid
      */
-    private double parseNumberWithLetter(String numberStr, String letter) {
-        double base = Double.parseDouble(numberStr);
+    private Double parseNumber(String s, boolean south) {
+        if (s == null) return null;
         
-        if (letter != null && !letter.isEmpty()) {
-            char letterChar = letter.charAt(0);
-            // A=1, B=2, C=3, etc.
-            int letterValue = letterChar - 'A' + 1;
-            // Each letter adds 0.075
-            double fraction = letterValue * 0.075;
-            base += fraction;
+        // Match: (\d+)\s*([A-Z]{0,3})  (prototype line 46)
+        Pattern numPattern = Pattern.compile("(\\d+)\\s*([A-Z]{0,3})");
+        Matcher m = numPattern.matcher(s.trim());
+        
+        if (!m.find()) {
+            return null;
         }
         
-        return base;
+        try {
+            int base = Integer.parseInt(m.group(1));
+            String letters = m.group(2);
+            
+            double n = base;
+            
+            // Add fraction for first letter if it's A-G (prototype line 47)
+            // 0.3 * (ord(m.group(2)[0]) - 64) / 4 if m.group(2) and m.group(2)[0] in 'ABCDEFG'
+            if (letters != null && !letters.isEmpty()) {
+                char firstLetter = letters.charAt(0);
+                if (firstLetter >= 'A' && firstLetter <= 'G') {
+                    // ord('A') = 65, so (65-64)=1, (66-64)=2, etc.
+                    n += 0.3 * (firstLetter - 64) / 4.0;
+                }
+            }
+            
+            // Apply SUR modifier (prototype line 48: return -n if south else n)
+            if (south) {
+                n = -n;
+            }
+            
+            return n;
+            
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

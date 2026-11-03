@@ -164,22 +164,26 @@ class BusSegmentReaderTest {
 
     @Test
     void testSkipSegmentWithMissingFields(@TempDir Path tempDir) throws IOException {
-        // Test that segments with missing numeric fields are skipped
+        // Test that segments with missing required fields are skipped
+        // road_m is optional (uses used_m as fallback), but from_stop_id is required
         Path csvFile = tempDir.resolve("bus_segments.csv");
         Files.writeString(csvFile, """
             route_id,direction,from_stop_id,to_stop_id,from_seq,to_seq,straight_m,road_m,used_m,method
             301A,0,1001,1002,1,2,250.5,320.8,300.0,valid
             301B,0,,2002,1,2,180.2,210.5,200.0,missing_from_stop
-            301C,0,3001,3002,1,2,450.0,,500.0,missing_road_m
+            301C,0,3001,3002,1,2,450.0,,500.0,missing_road_m_ok
             """);
         
-        // Read bus segments - should skip malformed ones
+        // Read bus segments - should skip only the one with missing from_stop_id
         BusSegmentReader reader = new BusSegmentReader();
         List<BusSegment> segments = reader.read(csvFile);
         
-        // Should have only 1 valid segment
-        assertEquals(1, segments.size());
+        // Should have 2 valid segments (301A and 301C - 301B has missing from_stop_id)
+        assertEquals(2, segments.size());
         assertEquals("301A", segments.get(0).routeId());
+        assertEquals("301C", segments.get(1).routeId());
+        // Verify 301C uses used_m for road_m when road_m is empty
+        assertEquals(500.0, segments.get(1).roadM(), 0.01);
     }
 
     @Test

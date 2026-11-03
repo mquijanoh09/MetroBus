@@ -349,9 +349,10 @@ class AddressParserTest {
     
     @Test
     void testLetterConversionZ() {
+        // Prototype only handles A-G letters; Z is ignored (line 47: 'if m.group(2)[0] in "ABCDEFG"')
         Optional<ParsedAddress> result = parser.parse("CL 43Z # 20 - 15");
         assertTrue(result.isPresent());
-        assertEquals(43.0 + 26 * 0.075, result.get().getPrimaryNumber(), 0.001);
+        assertEquals(43.0, result.get().getPrimaryNumber(), 0.001);  // Z ignored -> 43.0
     }
     
     @Test

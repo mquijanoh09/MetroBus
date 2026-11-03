@@ -28,15 +28,25 @@ public class AddressLocator {
     }
     public Optional<Coordinate> locate(ParsedAddress address) {
         if (address == null || referenceTable.isEmpty()) return Optional.empty();
-        double targetCalle = address.getPrimaryNumber();
-        double targetCarrera = address.getSecondaryNumber();
-        if (address.getStreetType() == StreetType.CARRERA) {
-            double temp = targetCalle;
-            targetCalle = targetCarrera;
-            targetCarrera = temp;
+        
+        // Reject CIRCULAR addresses (algorithm.md line 136: "cannot be located")
+        if (address.getStreetType() == StreetType.CIRCULAR) {
+            return Optional.empty();
         }
+        
+        // Use prototype-transformed (calle, carrera) for locating
+        double targetCalle = address.getCalleNumber();
+        double targetCarrera = address.getCarreraNumber();
+        
         List<WeightedPoint> closest = findClosestPoints(targetCalle, targetCarrera, 4);
         if (closest.isEmpty()) return Optional.empty();
+        
+        // Reject if closest reference point is > 6 address units away (algorithm.md section 3 step 4)
+        WeightedPoint closestPoint = closest.get(0);
+        if (closestPoint.distance > 6.0) {
+            return Optional.empty();
+        }
+        
         double sumWeights = 0.0, weightedLat = 0.0, weightedLon = 0.0;
         for (WeightedPoint wp : closest) {
             sumWeights += wp.weight;
@@ -58,8 +68,8 @@ public class AddressLocator {
         for (ReferencePoint ref : referenceTable) {
             double cDist = Math.abs(ref.calle - tCalle);
             double crDist = Math.abs(ref.carrera - tCarrera);
-            double dist = Math.sqrt(cDist * cDist + crDist * crDist);
-            double weight = dist < 0.01 ? 1000.0 : 1.0 / dist;
+            double dist = Math.hypot(cDist, crDist);
+            double weight = 1.0 / (0.001 + dist);
             pq.offer(new WeightedPoint(ref, dist, weight));
         }
         List<WeightedPoint> result = new ArrayList<>();
@@ -77,24 +87,26 @@ public class AddressLocator {
         int skipped = 0;
         for (Stop stop : stops) {
             String addr = stop.getAddress();
-            if (addr.toUpperCase().startsWith("VDA ") || addr.toUpperCase().startsWith("VEREDA ") || 
-                addr.trim().isEmpty() || addr.matches("Parada \\d+")) {
-                skipped++;
-                continue;
-            }
+            
+            // Parse the address (parser handles all rejection logic)
             Optional<ParsedAddress> parsed = parser.parse(addr);
             if (parsed.isEmpty()) {
                 skipped++;
                 continue;
             }
+            
             ParsedAddress pa = parsed.get();
-            double calle = pa.getPrimaryNumber();
-            double carrera = pa.getSecondaryNumber();
-            if (pa.getStreetType() == StreetType.CARRERA) {
-                double temp = calle;
-                calle = carrera;
-                carrera = temp;
+            
+            // Skip CIRCULAR addresses (algorithm.md: "cannot be located")
+            if (pa.getStreetType() == StreetType.CIRCULAR) {
+                skipped++;
+                continue;
             }
+            
+            // Use prototype-transformed (calle, carrera) for reference table
+            double calle = pa.getCalleNumber();
+            double carrera = pa.getCarreraNumber();
+            
             table.add(new ReferencePoint(calle, carrera, stop.getCoordinate()));
         }
         LOGGER.info(String.format("Built reference table: %d parseable addresses, %d skipped", table.size(), skipped));

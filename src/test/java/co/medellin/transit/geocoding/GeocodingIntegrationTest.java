@@ -1,10 +1,15 @@
 package co.medellin.transit.geocoding;
 
+import co.medellin.transit.data.StopArcGisReader;
 import co.medellin.transit.model.Coordinate;
+import co.medellin.transit.model.Stop;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -205,6 +210,68 @@ class GeocodingIntegrationTest {
                   "Higher Carrera number should have lower longitude (west)");
     }
     
+    @Test
+    void testLocatorAccuracyOn300Stops() throws IOException {
+        // Load all stops from real data
+        Path dataDir = Paths.get("data");
+        StopArcGisReader reader = new StopArcGisReader();
+        List<Stop> allStops = reader.readPaginated(dataDir, "stops", ".json");
+        
+        assertEquals(3590, allStops.size(), "Should have 3,590 unique stops");
+        
+        // Select 300 test stops (deterministic: every 12th stop)
+        List<Stop> testStops = new ArrayList<>();
+        for (int i = 0; i < allStops.size(); i += 12) {
+            testStops.add(allStops.get(i));
+            if (testStops.size() >= 300) break;
+        }
+        
+        assertEquals(300, testStops.size(), "Should have 300 test stops");
+        
+        // Test each stop
+        List<Double> errors = new ArrayList<>();
+        AddressParser parser = new AddressParser();
+        
+        for (Stop testStop : testStops) {
+            // Build reference table WITHOUT this stop
+            List<Stop> referenceStops = new ArrayList<>(allStops);
+            referenceStops.remove(testStop);
+            AddressLocator locator = new AddressLocator(referenceStops);
+            
+            // Parse the stop's address
+            String address = testStop.getAddress();
+            Optional<ParsedAddress> parsed = parser.parse(address);
+            if (parsed.isEmpty()) continue; // Skip unparseable addresses
+            
+            // Locate it
+            Optional<Coordinate> located = locator.locate(parsed.get());
+            if (located.isEmpty()) continue; // Skip unlocatable addresses
+            
+            // Measure error (haversine distance)
+            double errorMeters = haversineDistance(testStop.getCoordinate(), located.get());
+            errors.add(errorMeters);
+        }
+        
+        // With 6-unit rejection threshold, expect ~96% success rate (288+ of 300)
+        assertTrue(errors.size() >= 285, 
+            String.format("Should successfully locate at least 285 of 300 stops, got %d", errors.size()));
+        
+        // Calculate statistics
+        Collections.sort(errors);
+        double median = errors.get(errors.size() / 2);
+        double p90 = errors.get((int)(errors.size() * 0.9));
+        double max = errors.get(errors.size() - 1);
+        
+        System.out.println(String.format("300-stop accuracy test: %d stops located", errors.size()));
+        System.out.println(String.format("  Median error: %.0f m", median));
+        System.out.println(String.format("  P90 error: %.0f m", p90));
+        System.out.println(String.format("  Max error: %.0f m", max));
+        
+        // Assert median threshold (per user answer to Task 1 question 3)
+        assertTrue(median <= 100.0, 
+            String.format("Median error should be ≤ 100 m, was %.0f m", median));
+    }
+    
     /**
      * Helper method to geocode an address string directly to a coordinate.
      * Throws assertion error if geocoding fails.
@@ -217,5 +284,22 @@ class GeocodingIntegrationTest {
         assertTrue(coord.isPresent(), "Failed to locate: " + addressStr);
         
         return coord.get();
+    }
+    
+    /**
+     * Haversine distance in meters between two coordinates.
+     */
+    private double haversineDistance(Coordinate c1, Coordinate c2) {
+        double lat1 = Math.toRadians(c1.getLat());
+        double lat2 = Math.toRadians(c2.getLat());
+        double deltaLat = Math.toRadians(c2.getLat() - c1.getLat());
+        double deltaLon = Math.toRadians(c2.getLon() - c1.getLon());
+        
+        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+                   Math.cos(lat1) * Math.cos(lat2) *
+                   Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        
+        return 6371000 * c; // Earth radius in meters
     }
 }

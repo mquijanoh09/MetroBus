@@ -28,7 +28,7 @@ public enum StreetType {
             case "CALLE", "CL" -> CALLE;
             case "CARRERA", "CR", "KR", "CRA" -> CARRERA;
             case "DIAGONAL", "DG" -> DIAGONAL;
-            case "CIRCULAR" -> CIRCULAR;
+            case "CIRCULAR", "CQ", "CIRCUNVALAR" -> CIRCULAR;
             case "TRANSVERSAL", "TV" -> TRANSVERSAL;
             default -> null;
         };

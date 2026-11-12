@@ -158,7 +158,10 @@ public class GraphBuilder {
             Map<Integer, Route> routeMap = new HashMap<>();
             for (Route route : routes) {
                 routeMap.put(route.getId(), route);
+                // Store route type in graph for fare calculation
+                graph.setRouteType(String.valueOf(route.getId()), route.getTipo());
             }
+            LOGGER.info(String.format("Stored %d route types in graph", routes.size()));
             
             // Step 3: Load raw transit data from CSV files
             LOGGER.info("Cargando datos de tránsito desde CSV...");
@@ -300,8 +303,8 @@ public class GraphBuilder {
                 }
                 
                 // Calculate travel time: (usedM / busSpeedMps) + dwellTimeSec
-                double busSpeedMps = getBusSpeed(routeId, params) / 3.6; // Convert km/h to m/s
-                int dwellTimeSec = 20; // Default dwell time
+                double busSpeedMps = getBusSpeed(routeId, routeMap, params) / 3.6; // Convert km/h to m/s
+                int dwellTimeSec = 20; // Per config.properties: bus.dwellTimeSec=20
                 int realSec = (int) Math.round((segment.usedM() / busSpeedMps) + dwellTimeSec);
                 int perceivedCost = realSec; // No penalty for RIDE edges
                 
@@ -354,8 +357,13 @@ public class GraphBuilder {
                     Integer toStateId = stopRouteToStateId.get(toKey);
                     
                     if (fromStateId != null && toStateId != null) {
-                        // Turnaround time: estimate 2 minutes (120 seconds)
-                        int realSec = 120;
+                        // Turnaround time: straight distance × 1.3 / bus speed
+                        // Per graph-structure.md section 2.1
+                        double busSpeedKmh = getBusSpeed(routeId, routeMap, params);
+                        double busSpeedMps = busSpeedKmh / 3.6; // Convert km/h to m/s
+                        double straightDistanceM = lastOutbound.straightM();
+                        double travelM = straightDistanceM * 1.3; // Apply street factor
+                        int realSec = (int) Math.round(travelM / busSpeedMps);
                         int perceivedCost = realSec;
                         
                         Edge turnaroundEdge = new Edge(fromStateId, toStateId, EdgeKind.RIDE, realSec, perceivedCost);
@@ -374,8 +382,12 @@ public class GraphBuilder {
             
             // Group transit segments by line
             Map<String, List<TransitSegment>> transitLineGroups = new HashMap<>();
+            Map<String, String> lineToMode = new HashMap<>(); // Track mode for each line
             for (TransitSegment segment : transitSegments) {
                 transitLineGroups.computeIfAbsent(segment.line(), k -> new ArrayList<>()).add(segment);
+                String mode = segment.mode();
+                lineToMode.put(segment.line(), mode); // Store mode
+                graph.setLineMode(segment.line(), mode); // Add to graph for fare calculation
             }
             
             // Sort each line's segments by order
@@ -492,8 +504,8 @@ public class GraphBuilder {
                 }
                 int busStopStateId = entry.getValue();
                 
-                // Average wait time for buses (from config, default 300s = 5 min)
-                int waitTimeSec = 300;
+                // Average wait time for buses (from config)
+                int waitTimeSec = params.getBusWaitSec();
                 int realSec = waitTimeSec;
                 int perceivedCost = waitTimeSec + boardingPenaltySec;
                 
@@ -506,6 +518,8 @@ public class GraphBuilder {
             for (Map.Entry<String, Integer> entry : stationLineToStateId.entrySet()) {
                 String[] parts = entry.getKey().split("_");
                 String stationName = parts[0];
+                String line = parts[1];
+                
                 Integer walkStateId = stationNameToWalkStateId.get(stationName);
                 if (walkStateId == null) {
                     LOGGER.warning("No WALK state found for station: " + stationName);
@@ -513,8 +527,21 @@ public class GraphBuilder {
                 }
                 int metroStationStateId = entry.getValue();
                 
-                // Average wait time for metro (shorter than bus, default 180s = 3 min)
-                int waitTimeSec = 180;
+                // Get wait time based on mode
+                String mode = lineToMode.get(line);
+                int waitTimeSec;
+                if (mode == null) {
+                    waitTimeSec = params.getMetroWaitSec(); // Default to metro
+                } else {
+                    waitTimeSec = switch (mode.toLowerCase()) {
+                        case "metro" -> params.getMetroWaitSec();
+                        case "metroplus", "brt" -> params.getMetroplusWaitSec();
+                        case "tranvía", "tranvia", "tram" -> params.getTramWaitSec();
+                        case "metrocable", "cable_car" -> params.getCableCarWaitSec();
+                        default -> params.getMetroWaitSec();
+                    };
+                }
+                
                 int realSec = waitTimeSec;
                 int perceivedCost = waitTimeSec + boardingPenaltySec;
                 
@@ -646,17 +673,33 @@ public class GraphBuilder {
      * Gets the bus speed in km/h for a given route ID.
      * Looks up the route type and returns the appropriate speed from configuration.
      * 
-     * @param routeId route identifier
+     * @param routeId route identifier (id_ruta as String)
+     * @param routeMap map from route ID to Route object
      * @param params configuration parameters
-     * @return bus speed in km/h (default: 18 km/h for Integrada buses)
+     * @return bus speed in km/h
      */
-    private double getBusSpeed(String routeId, Parameters params) {
-        // In a full implementation, this would look up the route type from routeMap
-        // and return speeds like:
-        // - Directa Centro / Circular: 15 km/h
-        // - Integrada / Directa No Centro: 18 km/h
-        //
-        // For now, return a default speed
-        return 18.0; // km/h
+    private double getBusSpeed(String routeId, Map<Integer, Route> routeMap, Parameters params) {
+        try {
+            int routeIdInt = Integer.parseInt(routeId);
+            Route route = routeMap.get(routeIdInt);
+            
+            if (route != null) {
+                String tipo = route.getTipo();
+                
+                // Per graph-structure.md section 4 and spec 02:
+                // - Directa Centro / Circular: 15 km/h
+                // - Integrada / Directa No Centro: 18 km/h
+                if (tipo.contains("Directa Centro") || tipo.contains("Circular")) {
+                    return 15.0;
+                } else {
+                    return 18.0;
+                }
+            }
+        } catch (NumberFormatException e) {
+            // If routeId is not numeric, fall through to default
+        }
+        
+        // Default for unknown routes
+        return 18.0;
     }
 }

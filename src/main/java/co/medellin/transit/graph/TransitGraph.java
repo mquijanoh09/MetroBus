@@ -62,6 +62,8 @@ public final class TransitGraph {
     private final List<Edge>[] adjacency;
     private final Map<Place, List<State>> placeIndex;
     private final Map<String, List<State>> spatialIndex; // Grid-based spatial index
+    private final Map<String, String> lineToMode; // Maps transit line to mode (metro, brt, cable_car, tram)
+    private final Map<String, String> routeTypes; // Maps bus route ID to tipo_ruta (Integrada, Directa Centro, etc.)
     private final boolean immutable;
     private int edgeCount;
     
@@ -92,6 +94,8 @@ public final class TransitGraph {
         }
         this.placeIndex = new HashMap<>();
         this.spatialIndex = new HashMap<>();
+        this.lineToMode = new HashMap<>(); // Transit line to mode mapping
+        this.routeTypes = new HashMap<>(); // Bus route ID to tipo_ruta mapping
         this.immutable = false;
         this.edgeCount = 0;
     }
@@ -338,6 +342,71 @@ public final class TransitGraph {
         double c = 2 * Math.asin(Math.sqrt(a));
         
         return EARTH_RADIUS_METERS * c;
+    }
+    
+    /**
+     * Sets the mode for a transit line (e.g., "metro", "brt", "cable_car", "tram").
+     * This is used by FareCalculator to determine the correct fare.
+     * 
+     * @param line transit line identifier (e.g., "A", "1", "J")
+     * @param mode transit mode (e.g., "metro", "brt", "cable_car", "tram")
+     * @throws IllegalStateException if graph is immutable
+     * @throws NullPointerException if line or mode is null
+     */
+    public void setLineMode(String line, String mode) {
+        if (immutable) {
+            throw new IllegalStateException("Cannot modify immutable graph");
+        }
+        Objects.requireNonNull(line, "line cannot be null");
+        Objects.requireNonNull(mode, "mode cannot be null");
+        lineToMode.put(line, mode);
+    }
+    
+    /**
+     * Gets the mode for a transit line.
+     * 
+     * @param line transit line identifier (e.g., "A", "1", "J")
+     * @return the mode (e.g., "metro", "brt", "cable_car", "tram"), or null if not found
+     */
+    public String getLineMode(String line) {
+        return lineToMode.get(line);
+    }
+    
+    /**
+     * Sets the route type for a bus route.
+     * Used during graph construction to store tipo_ruta values.
+     * 
+     * @param routeId bus route ID as string
+     * @param routeType route type (e.g., "Integrada", "Directa Centro", "Circular", "Directa No Centro")
+     * @throws IllegalStateException if graph is immutable
+     * @throws NullPointerException if routeId or routeType is null
+     */
+    public void setRouteType(String routeId, String routeType) {
+        if (immutable) {
+            throw new IllegalStateException("Cannot modify immutable graph");
+        }
+        Objects.requireNonNull(routeId, "routeId cannot be null");
+        Objects.requireNonNull(routeType, "routeType cannot be null");
+        routeTypes.put(routeId, routeType);
+    }
+    
+    /**
+     * Gets the route type for a bus route.
+     * 
+     * @param routeId bus route ID as string
+     * @return the route type (e.g., "Integrada", "Directa Centro"), or null if not found
+     */
+    public String getRouteType(String routeId) {
+        return routeTypes.get(routeId);
+    }
+    
+    /**
+     * Gets the number of route types stored in the graph.
+     * 
+     * @return the count of route types
+     */
+    public int getRouteTypeCount() {
+        return routeTypes.size();
     }
     
     @Override

@@ -126,20 +126,23 @@ public class Router {
     }
     
     /**
-     * Multi-source/multi-target Dijkstra's algorithm.
+     * Multi-source/multi-target Dijkstra's algorithm with walk-only candidate.
      * 
      * <p>Algorithm:
      * <ol>
-     *   <li>Initialize all sources with distance 0</li>
+     *   <li>Initialize walk-only candidate as best (walking directly)</li>
+     *   <li>Initialize all sources with access walk cost</li>
      *   <li>Extract minimum cost node from priority queue</li>
-     *   <li>If target reached, track best target cost</li>
-     *   <li>Early termination: when pq.min > bestTargetCost (optimal proven)</li>
+     *   <li>If target reached, add egress walk penalty and compare with best</li>
+     *   <li>Early termination: when pq.min >= best (optimal proven)</li>
      *   <li>Relax outgoing edges with perceived cost</li>
-     *   <li>Reconstruct path from previous[] array</li>
+     *   <li>If walking is as fast in real time, return walk-only trip</li>
      * </ol>
      * 
      * @param sources starting states
      * @param targets destination states
+     * @param origin actual origin place
+     * @param destination actual destination place
      * @return best path or empty if no path exists
      */
     private Optional<DijkstraResult> dijkstra(List<State> sources, List<State> targets, Place origin, Place destination) {
@@ -150,29 +153,46 @@ public class Router {
         
         PriorityQueue<Node> pq = new PriorityQueue<>(Comparator.comparingInt(n -> n.cost));
         Set<Integer> sourceSet = new HashSet<>();
-        Set<Integer> targetSet = new HashSet<>();
+        Map<Integer, TargetInfo> targetMap = new HashMap<>();
+        
+        // Calculate direct walk as the initial best (walk-only candidate)
+        double directDistMeters = haversineDistance(origin.getCoord(), destination.getCoord());
+        double directWalkMeters = directDistMeters * params.getWalkStreetFactor();
+        int directWalkSec = (int) Math.round(directWalkMeters / params.getWalkingSpeedMps());
+        int directWalkPerceived = (int) Math.round(directWalkSec * params.getWalkPenaltyMultiplier()) + params.getWalkPenaltyConstant();
+        
+        int bestPerceivedCost = directWalkPerceived;
+        int bestTargetId = -1;
+        int bestAccessWalkSec = 0;
+        double bestAccessWalkMeters = 0;
+        int bestEgressWalkSec = 0;
+        double bestEgressWalkMeters = 0;
         
         // Add all sources with walking cost from origin (access walking)
+        Map<Integer, AccessInfo> accessMap = new HashMap<>();
         for (State source : sources) {
             sourceSet.add(source.getId());
             // Calculate walking distance and time
             double distanceMeters = haversineDistance(origin.getCoord(), source.getPlace().getCoord());
             double walkDistanceMeters = distanceMeters * params.getWalkStreetFactor();
             int walkTimeSec = (int) Math.round(walkDistanceMeters / params.getWalkingSpeedMps());
-            // Apply walk penalty
+            // Apply walk penalty for perceived cost
             int perceivedCost = (int) Math.round(walkTimeSec * params.getWalkPenaltyMultiplier()) + params.getWalkPenaltyConstant();
             
             distances[source.getId()] = perceivedCost;
             pq.offer(new Node(source.getId(), perceivedCost));
+            accessMap.put(source.getId(), new AccessInfo(walkDistanceMeters, walkTimeSec));
         }
         
-        // Build target set for fast lookup
+        // Build target map with egress walk info
         for (State target : targets) {
-            targetSet.add(target.getId());
+            double distanceMeters = haversineDistance(target.getPlace().getCoord(), destination.getCoord());
+            double walkDistanceMeters = distanceMeters * params.getWalkStreetFactor();
+            int walkTimeSec = (int) Math.round(walkDistanceMeters / params.getWalkingSpeedMps());
+            int perceivedCost = (int) Math.round(walkTimeSec * params.getWalkPenaltyMultiplier()) + params.getWalkPenaltyConstant();
+            
+            targetMap.put(target.getId(), new TargetInfo(walkDistanceMeters, walkTimeSec, perceivedCost));
         }
-        
-        int bestTargetCost = Integer.MAX_VALUE;
-        int bestTargetId = -1;
         
         // Main Dijkstra loop
         while (!pq.isEmpty()) {
@@ -180,23 +200,28 @@ public class Router {
             int currentId = current.stateId;
             int currentCost = current.cost;
             
+            // Early termination: if current cost >= best, all remaining will be worse
+            if (currentCost >= bestPerceivedCost) {
+                break;
+            }
+            
             // Skip if already visited with better cost
             if (visited[currentId]) {
                 continue;
             }
             visited[currentId] = true;
             
-            // Check if this is a target AND we've actually traversed at least one edge
-            // (previous[currentId] != -1 means we reached this via an edge, not just initialization)
-            if (targetSet.contains(currentId) && previous[currentId] != -1) {
-                if (currentCost < bestTargetCost) {
-                    bestTargetCost = currentCost;
+            // Check if this is a target (only WALK states can be targets)
+            TargetInfo targetInfo = targetMap.get(currentId);
+            if (targetInfo != null) {
+                // Add egress walk penalty to get total perceived cost
+                int totalPerceivedCost = currentCost + targetInfo.perceivedCost;
+                
+                if (totalPerceivedCost < bestPerceivedCost) {
+                    bestPerceivedCost = totalPerceivedCost;
                     bestTargetId = currentId;
-                }
-                // Early termination: if min pq cost > best target, we're done
-                // (all remaining paths will be worse)
-                if (!pq.isEmpty() && pq.peek().cost > bestTargetCost) {
-                    break;
+                    bestEgressWalkMeters = targetInfo.meters;
+                    bestEgressWalkSec = targetInfo.seconds;
                 }
             }
             
@@ -219,7 +244,7 @@ public class Router {
             }
         }
         
-        // Check if we found a path
+        // If no path found through graph, return empty (walk-only will be handled by caller if appropriate)
         if (bestTargetId == -1) {
             return Optional.empty();
         }
@@ -227,10 +252,75 @@ public class Router {
         // Reconstruct path
         List<State> path = reconstructPath(bestTargetId);
         
-        // Calculate real duration (without penalties)
-        int realDurationSec = calculateRealDuration(path);
+        // Find access info for the first state in path
+        int firstStateId = path.get(0).getId();
+        AccessInfo accessInfo = accessMap.get(firstStateId);
+        if (accessInfo != null) {
+            bestAccessWalkMeters = accessInfo.meters;
+            bestAccessWalkSec = accessInfo.seconds;
+        }
         
-        return Optional.of(new DijkstraResult(path, bestTargetCost, realDurationSec));
+        // Calculate real duration (without penalties) including access and egress walks
+        int graphRealDuration = calculateRealDuration(path);
+        int totalRealDuration = bestAccessWalkSec + graphRealDuration + bestEgressWalkSec;
+        
+        // Rule: If walking all the way is as fast or faster in REAL time, return walk-only
+        // BUT: Only if we actually found a transit path to compare against
+        if (bestTargetId != -1 && directWalkSec <= totalRealDuration) {
+            // Return a walk-only result: single-state path with walk time
+            State walkOnlyState = path.get(0); // Use first source state as placeholder
+            return Optional.of(new DijkstraResult(
+                Collections.singletonList(walkOnlyState),
+                directWalkPerceived,
+                directWalkSec,
+                origin.getCoord(),
+                destination.getCoord(),
+                directWalkMeters,
+                directWalkSec,
+                0,
+                0
+            ));
+        }
+        
+        return Optional.of(new DijkstraResult(
+            path,
+            bestPerceivedCost,
+            totalRealDuration,
+            origin.getCoord(),
+            destination.getCoord(),
+            bestAccessWalkMeters,
+            bestAccessWalkSec,
+            bestEgressWalkMeters,
+            bestEgressWalkSec
+        ));
+    }
+    
+    /**
+     * Access walk information for a source state.
+     */
+    private static class AccessInfo {
+        final double meters;
+        final int seconds;
+        
+        AccessInfo(double meters, int seconds) {
+            this.meters = meters;
+            this.seconds = seconds;
+        }
+    }
+    
+    /**
+     * Target information including egress walk cost.
+     */
+    private static class TargetInfo {
+        final double meters;
+        final int seconds;
+        final int perceivedCost;
+        
+        TargetInfo(double meters, int seconds, int perceivedCost) {
+            this.meters = meters;
+            this.seconds = seconds;
+            this.perceivedCost = perceivedCost;
+        }
     }
     
     /**
@@ -268,11 +358,14 @@ public class Router {
             for (Edge edge : graph.getOutgoingEdges(current.getId())) {
                 if (edge.getTargetId() == next.getId()) {
                     duration += edge.getRealSec();
+                    LOGGER.log(Level.FINE, "Edge {0}->{1} ({2}): +{3}s, total={4}s", 
+                        new Object[]{current.getId(), next.getId(), edge.getKind(), edge.getRealSec(), duration});
                     break;
                 }
             }
         }
         
+        LOGGER.log(Level.FINE, "Total graph duration: {0}s", duration);
         return duration;
     }
     

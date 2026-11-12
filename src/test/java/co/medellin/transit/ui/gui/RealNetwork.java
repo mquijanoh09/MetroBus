@@ -9,6 +9,7 @@ import co.medellin.transit.graph.TransitGraph;
 import co.medellin.transit.routing.Parameters;
 import co.medellin.transit.routing.Router;
 import co.medellin.transit.routing.StepBuilder;
+import co.medellin.transit.routing.VehicleLabelFormatter;
 import co.medellin.transit.ui.TripPlanner;
 
 import java.nio.file.Path;
@@ -28,8 +29,9 @@ public final class RealNetwork {
             System.setProperty("transit.data.dir", DATA.toString());
             try {
                 TransitGraph graph = new GraphBuilder().build(DATA);
+                VehicleLabelFormatter vehicleLabelFormatter = new VehicleLabelFormatter(graph, DATA);
                 planner = new TripPlanner(new Router(graph, new Parameters()), new AddressParser(),
-                        new AddressLocator(), new FareCalculator(FareConfig.defaults(), graph), new StepBuilder(graph));
+                        new AddressLocator(), new FareCalculator(FareConfig.defaults(), graph), new StepBuilder(graph, vehicleLabelFormatter));
             } finally {
                 if (previous == null) {
                     System.clearProperty("transit.data.dir");

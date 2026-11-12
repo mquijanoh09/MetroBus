@@ -10,6 +10,7 @@ import co.medellin.transit.model.Step;
 import co.medellin.transit.routing.Parameters;
 import co.medellin.transit.routing.Router;
 import co.medellin.transit.routing.StepBuilder;
+import co.medellin.transit.routing.VehicleLabelFormatter;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -35,12 +36,13 @@ class TripPlannerTest {
         previousDataDirProperty = System.getProperty("transit.data.dir");
         System.setProperty("transit.data.dir", dataDir.toString());
         TransitGraph graph = new GraphBuilder().build(dataDir);
+        VehicleLabelFormatter vehicleLabelFormatter = new VehicleLabelFormatter(graph, dataDir);
         planner = new TripPlanner(
                 new Router(graph, new Parameters()),
                 new AddressParser(),
                 new AddressLocator(),
                 new FareCalculator(FareConfig.defaults(), graph),
-                new StepBuilder(graph));
+                new StepBuilder(graph, vehicleLabelFormatter));
     }
 
     @AfterAll

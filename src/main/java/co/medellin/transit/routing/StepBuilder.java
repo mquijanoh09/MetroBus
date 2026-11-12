@@ -36,18 +36,24 @@ public final class StepBuilder {
     private static final double EARTH_RADIUS_METERS = 6371000.0;
     
     private final TransitGraph graph;
+    private final VehicleLabelFormatter labelFormatter;
     
     /**
      * Creates a new StepBuilder for the given transit graph.
      * 
      * @param graph the transit graph containing state and edge information
-     * @throws NullPointerException if graph is null
+     * @param labelFormatter formatter for vehicle labels
+     * @throws NullPointerException if graph or labelFormatter is null
      */
-    public StepBuilder(TransitGraph graph) {
+    public StepBuilder(TransitGraph graph, VehicleLabelFormatter labelFormatter) {
         if (graph == null) {
             throw new NullPointerException("graph cannot be null");
         }
+        if (labelFormatter == null) {
+            throw new NullPointerException("labelFormatter cannot be null");
+        }
         this.graph = graph;
+        this.labelFormatter = labelFormatter;
     }
     
     /**
@@ -76,6 +82,14 @@ public final class StepBuilder {
         
         List<Step> steps = new ArrayList<>();
         double totalWalkMeters = 0.0;
+        
+        // Add access walk if present
+        if (result.getAccessWalkTimeSec() > 0) {
+            Place firstPlace = path.get(0).getPlace();
+            Step accessWalk = createWalkStep(firstPlace, result.getAccessWalkTimeSec());
+            steps.add(accessWalk);
+            totalWalkMeters += result.getAccessWalkMeters();
+        }
         
         // Track state for consolidating ride segments
         String currentRoute = null;
@@ -131,18 +145,25 @@ public final class StepBuilder {
                         rideDurationSec = 0;
                     }
                     
-                    // Add boarding step
+                    // Get route and wait time
                     String routeToBoard = nextState.getRouteId()
                         .orElseThrow(() -> new IllegalStateException(
                             "BOARD edge must lead to a state with a routeId"));
                     
+                    int waitTimeSec = edge.getRealSec();
+                    
+                    // Add wait step showing the wait time
+                    Step waitStep = createWaitStep(routeToBoard, currentState.getPlace(), waitTimeSec);
+                    steps.add(waitStep);
+                    
+                    // Add boarding step (now has 0 duration since wait is separate)
                     Step boardStep = createBoardStep(
                         routeToBoard, 
                         currentState.getPlace()
                     );
                     steps.add(boardStep);
                     
-                    // Start tracking this route
+                    // Start tracking this route (rideDurationSec now starts at 0, not including wait)
                     currentRoute = routeToBoard;
                     rideStartPlace = currentState.getPlace();
                     rideEndPlace = currentState.getPlace();
@@ -180,6 +201,16 @@ public final class StepBuilder {
             steps.add(createRideStep(currentRoute, rideDurationSec, rideEndPlace));
         }
         
+        // Add egress walk if present
+        if (result.getEgressWalkTimeSec() > 0) {
+            // Create a placeholder place for "tu destino"
+            Coordinate destCoord = result.getActualDestination();
+            Place destination = new Place("tu destino", destCoord != null ? destCoord : path.get(path.size() - 1).getPlace().getCoord());
+            Step egressWalk = createWalkStep(destination, result.getEgressWalkTimeSec());
+            steps.add(egressWalk);
+            totalWalkMeters += result.getEgressWalkMeters();
+        }
+        
         return new Trip(steps, result.getRealDurationSec(), totalWalkMeters);
     }
     
@@ -215,6 +246,21 @@ public final class StepBuilder {
     }
     
     /**
+     * Creates a WAIT step with Spanish instructions.
+     * 
+     * @param routeId the route or line identifier to wait for
+     * @param location where to wait
+     * @param durationSec wait duration in seconds
+     * @return a WAIT step
+     */
+    private Step createWaitStep(String routeId, Place location, int durationSec) {
+        String vehicleLabel = labelFormatter.formatVehicle(routeId);
+        int minutes = (int) Math.max(1, Math.round(durationSec / 60.0));
+        String description = String.format("Esperar %s (%d min)", vehicleLabel, minutes);
+        return new Step(StepType.WAIT, description, durationSec, location, Optional.of(routeId));
+    }
+    
+    /**
      * Creates a BOARD step with Spanish instructions.
      * 
      * @param routeId the route or line identifier
@@ -222,7 +268,8 @@ public final class StepBuilder {
      * @return a BOARD step
      */
     private Step createBoardStep(String routeId, Place location) {
-        String description = String.format("Abordar %s en %s", routeId, location.getName());
+        String vehicleLabel = labelFormatter.formatVehicle(routeId);
+        String description = String.format("Abordar %s en %s", vehicleLabel, location.getName());
         return new Step(StepType.BOARD, description, 0, location, Optional.of(routeId));
     }
     
@@ -237,7 +284,8 @@ public final class StepBuilder {
      */
     private Step createRideStep(String routeId, int durationSec, Place endLocation) {
         int minutes = (int) Math.ceil(durationSec / 60.0);
-        String description = String.format("Viajar en %s por %d minutos", routeId, minutes);
+        String vehicleLabel = labelFormatter.formatVehicle(routeId);
+        String description = String.format("Viajar en %s por %d minutos", vehicleLabel, minutes);
         return new Step(StepType.RIDE, description, durationSec, endLocation, Optional.of(routeId));
     }
     

@@ -1,124 +1,77 @@
 package co.medellin.transit.fares;
 
 import co.medellin.transit.graph.TransitGraph;
-import co.medellin.transit.model.RouteType;
 import co.medellin.transit.model.Step;
 import co.medellin.transit.model.StepType;
 import co.medellin.transit.model.Trip;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Calculates fares for transit trips based on Medellín's fare rules.
  * 
- * <p>Fare Rules (January 2026):
+ * <p>Fare Rules (January 2026, from docs/fares.md):
  * <ul>
- * <li>Metro/Metroplús/Cable/Tram: 3,820 COP per boarding</li>
+ * <li>Metro/Metroplús/Cable/Tram (mass transit): 3,820 COP per boarding</li>
  * <li>Bus: 3,800 COP per boarding</li>
- * <li>Integration: When transferring between metro and bus within 90 minutes, 
- *     the total fare is 4,715 COP instead of paying both fares separately (savings of ~2,900 COP)</li>
+ * <li>Mass-transit integration: Within 90 minutes, transfers between metro/brt/cable/tram
+ *     cost no extra fare, except +750 COP surcharge when integration count reaches 5, 8, or 9</li>
+ * <li>Bus + Metro integration: When an "Integrada" bus is used right before or after mass transit,
+ *     within 90 minutes, the bus and transit pair costs 4,715 COP total</li>
+ * <li>No integration: Directa Centro, Circular, Directa No Centro buses, or bus→bus transfers
+ *     pay full fare each time</li>
  * <li>Walking: Free</li>
  * </ul>
  * 
- * <p>Integration is applied when:
- * <ul>
- * <li>First boarding is metro, second boarding is bus (within 90 minutes)</li>
- * <li>First boarding is bus, second boarding is metro (within 90 minutes)</li>
- * </ul>
- * 
- * <p>Integration is NOT applied when:
- * <ul>
- * <li>Both boardings are the same mode (metro→metro or bus→bus)</li>
- * <li>More than 90 minutes elapse between boardings</li>
- * <li>More than 2 boardings occur (integration only covers first 2 boardings)</li>
- * </ul>
+ * <p>This implementation is a direct port of reference/prototype.py Network.fare() function.
  */
 public class FareCalculator {
+    private static final int FARE_TRANSIT = 3820;
+    private static final int FARE_BUS = 3800;
+    private static final int FARE_INTEGRATED = 4715;
+    private static final int FARE_WINDOW_SEC = 90 * 60; // 90 minutes
+    private static final int TRANSIT_SURCHARGE = 750;
+    private static final Set<Integer> SURCHARGE_AT = Set.of(5, 8, 9);
+    
     private final FareConfig config;
     private final TransitGraph graph;
-    private final Map<String, RouteType> routeTypeCache;
 
     /**
      * Creates a new FareCalculator with the specified configuration.
      *
-     * @param config fare configuration
+     * @param config fare configuration (currently unused, keeping for compatibility)
      * @param graph transit graph for route lookup
      */
     public FareCalculator(FareConfig config, TransitGraph graph) {
         this.config = Objects.requireNonNull(config, "config cannot be null");
         this.graph = Objects.requireNonNull(graph, "graph cannot be null");
-        this.routeTypeCache = new HashMap<>();
-        buildRouteTypeCache();
-    }
-
-    /**
-     * Builds a cache of route IDs to route types for fast lookup.
-     * Routes starting with letters (A, B, etc.) are metro lines.
-     * Routes starting with numbers are buses.
-     */
-    private void buildRouteTypeCache() {
-        // This is a simplified heuristic. In a real implementation, 
-        // the GraphBuilder should provide a route registry.
-        // Metro lines in Medellín: A, B, C, H, J, K, L, M, P, T
-        // Everything else is a bus route.
-        
-        // For now, we'll determine route type during calculation based on route ID format.
-        // This will be populated lazily as we encounter routes.
-    }
-
-    /**
-     * Determines the route type based on route ID.
-     * Metro lines use letter identifiers (A, B, C, H, J, K, L, M, P, T).
-     * Bus routes use numeric identifiers.
-     *
-     * @param routeId route identifier
-     * @return RouteType (BUS or METRO)
-     */
-    private RouteType getRouteType(String routeId) {
-        if (routeId == null || routeId.isEmpty()) {
-            return RouteType.BUS; // Default to bus
-        }
-
-        // Check cache first
-        if (routeTypeCache.containsKey(routeId)) {
-            return routeTypeCache.get(routeId);
-        }
-
-        // Determine route type based on ID format
-        // Metro lines in Medellín: A, B, C (metro), H, J, K, L, M, P, T (cable cars and tram)
-        // These are single letters or short letter codes
-        // Bus routes are typically numeric or alphanumeric starting with a number
-        RouteType type;
-        char firstChar = routeId.charAt(0);
-        
-        if (Character.isLetter(firstChar)) {
-            // Single letter or letter-based route (metro/cable/tram/metroplus)
-            type = RouteType.METRO;
-        } else {
-            // Numeric route (bus)
-            type = RouteType.BUS;
-        }
-
-        // Cache the result
-        routeTypeCache.put(routeId, type);
-        return type;
     }
 
     /**
      * Calculates the fare for a complete trip.
      * 
-     * <p>The algorithm:
-     * <ol>
-     * <li>Iterate through trip steps</li>
-     * <li>For each BOARD step, record the boarding time and mode</li>
-     * <li>Check if integration applies (different mode within 90 minutes)</li>
-     * <li>Apply base fare or integrated fare accordingly</li>
-     * <li>Sum all applied fares</li>
-     * </ol>
+     * <p>Direct port of reference/prototype.py Network.fare() algorithm:
+     * <pre>
+     * cost = 0; transitStart = null; integrations = 0; last = null
+     * for each ride step p:
+     *   if p is mass transit:
+     *      if transitStart != null and p.t0 − transitStart ≤ 90 min:
+     *          integrations += 1; if integrations in {5, 8, 9}: cost += 750
+     *      else if last is an Integrada bus, ≤ 90 min, not yet integrated:
+     *          cost += 4,715 − 3,800; transitStart = last.t0; integrations = 1; mark last integrated
+     *      else:
+     *          cost += 3,820; transitStart = p.t0; integrations = 1
+     *   if p is a bus:
+     *      if p is Integrada, last was transit and not integrated, and ≤ 90 min since transitStart:
+     *          cost += 4,715 − 3,820; mark p integrated
+     *      else:
+     *          cost += 3,800
+     *   last = p
+     * </pre>
      *
      * @param trip the trip to calculate fare for
      * @return FareResult with total fare and segment breakdown
@@ -127,71 +80,134 @@ public class FareCalculator {
         Objects.requireNonNull(trip, "trip cannot be null");
 
         List<FareSegment> segments = new ArrayList<>();
-        int totalFare = 0;
-        boolean integrationApplied = false;
-
-        // Track first boarding for integration detection
-        Integer firstBoardingTimeSec = null;
-        RouteType firstBoardingMode = null;
-        int cumulativeTimeSec = 0;
-
-        for (Step step : trip.getSteps()) {
-            // Accumulate time to track when each step occurs
-            int stepStartTime = cumulativeTimeSec;
-            cumulativeTimeSec += step.getDurationSec();
-
-            // Only process boarding steps
-            if (step.getType() != StepType.BOARD) {
-                continue;
-            }
-
-            // Get route info from step
-            String routeId = step.getRouteInfo().orElse(null);
-            if (routeId == null) {
-                continue; // Skip if no route info
-            }
-
-            RouteType mode = getRouteType(routeId);
-            int baseFare = (mode == RouteType.METRO) ? config.getMetroFareCOP() : config.getBusFareCOP();
-
-            // Check for integration on second boarding
-            if (firstBoardingTimeSec == null) {
-                // First boarding - pay base fare
-                segments.add(new FareSegment(mode, baseFare, baseFare, false));
-                totalFare += baseFare;
-                firstBoardingTimeSec = stepStartTime;
-                firstBoardingMode = mode;
-            } else {
-                // Second or later boarding - check for integration
-                int timeSinceFirstBoarding = stepStartTime - firstBoardingTimeSec;
-                int minutesSinceFirstBoarding = timeSinceFirstBoarding / 60;
-
-                boolean canApplyIntegration = segments.size() == 1 && // Only for first 2 boardings
-                        minutesSinceFirstBoarding <= config.getIntegrationWindowMinutes() &&
-                        mode != firstBoardingMode; // Different mode
-
-                if (canApplyIntegration) {
-                    // Apply integration: replace first fare + second fare with integrated fare
-                    int firstFare = segments.get(0).getAppliedFareCOP();
-                    int integratedTotal = config.getIntegratedFareCOP();
-                    int secondFare = integratedTotal - firstFare;
-
-                    segments.add(new FareSegment(mode, baseFare, secondFare, true));
-                    totalFare += secondFare;
-                    integrationApplied = true;
+        int cost = 0;
+        Integer transitStart = null;  // t0 of first transit in current integration window
+        int integrations = 0;         // count of integrations in current window
+        RideInfo last = null;         // previous ride step info
+        Set<Integer> integrated = new HashSet<>();  // indices of integrated ride steps
+        
+        // Track ride steps and their t0 values
+        List<RideInfo> rides = extractRideInfo(trip);
+        
+        for (int i = 0; i < rides.size(); i++) {
+            RideInfo p = rides.get(i);
+            
+            if (p.isMassTransit) {
+                // This is mass transit (metro, brt, cable_car, tram)
+                if (transitStart != null && p.t0 - transitStart <= FARE_WINDOW_SEC) {
+                    // Transfer within mass-transit system
+                    integrations++;
+                    if (SURCHARGE_AT.contains(integrations)) {
+                        cost += TRANSIT_SURCHARGE;
+                    }
+                    // No additional base fare for this transfer
+                } else if (last != null && !last.isMassTransit && isIntegradaBus(last.routeId) 
+                        && p.t0 - last.t0 <= FARE_WINDOW_SEC && !integrated.contains(last.index)) {
+                    // Integrated bus → transit: pair costs 4,715
+                    // We already paid 3,800 for the bus, so pay 4,715 - 3,800 = 915 more
+                    cost += FARE_INTEGRATED - FARE_BUS;
+                    transitStart = last.t0;
+                    integrations = 1;
+                    integrated.add(last.index);
                 } else {
-                    // No integration - pay base fare
-                    segments.add(new FareSegment(mode, baseFare, baseFare, false));
-                    totalFare += baseFare;
+                    // New transit boarding, not integrated
+                    cost += FARE_TRANSIT;
+                    transitStart = p.t0;
+                    integrations = 1;
+                }
+            } else {
+                // This is a bus
+                if (isIntegradaBus(p.routeId) && last != null && last.isMassTransit 
+                        && !integrated.contains(last.index) && transitStart != null 
+                        && p.t0 - transitStart <= FARE_WINDOW_SEC) {
+                    // Transit → integrated bus: pair costs 4,715
+                    // We already paid 3,820 for transit, so pay 4,715 - 3,820 = 895 more
+                    cost += FARE_INTEGRATED - FARE_TRANSIT;
+                    integrated.add(i);
+                } else {
+                    // Regular bus boarding
+                    cost += FARE_BUS;
                 }
             }
+            
+            last = p;
         }
-
-        // If no transit segments, return zero fare (walking only)
-        if (segments.isEmpty()) {
-            return FareResult.zero();
+        
+        // Build fare segments (simplified - just track total)
+        if (cost > 0) {
+            // For now, create a single aggregate segment
+            // Could be enhanced to track per-boarding segments
+            segments.add(new FareSegment(null, cost, cost, !integrated.isEmpty()));
         }
-
-        return new FareResult(totalFare, segments, integrationApplied);
+        
+        return new FareResult(cost, segments, !integrated.isEmpty());
+    }
+    
+    /**
+     * Extracts ride information from trip steps.
+     * Each ride has a t0 (start time when BOARD occurs) and other metadata.
+     * 
+     * @param trip the trip
+     * @return list of ride information
+     */
+    private List<RideInfo> extractRideInfo(Trip trip) {
+        List<RideInfo> rides = new ArrayList<>();
+        int cumulativeTime = 0;
+        int rideIndex = 0;
+        
+        for (Step step : trip.getSteps()) {
+            if (step.getType() == StepType.BOARD) {
+                // Record t0 BEFORE the wait
+                String routeId = step.getRouteInfo().orElse(null);
+                if (routeId != null) {
+                    boolean isMassTransit = isMassTransit(routeId);
+                    rides.add(new RideInfo(rideIndex++, routeId, cumulativeTime, isMassTransit));
+                }
+            }
+            // Accumulate time
+            cumulativeTime += step.getDurationSec();
+        }
+        
+        return rides;
+    }
+    
+    /**
+     * Determines if a route is mass transit (metro, brt, cable_car, tram).
+     * 
+     * @param routeId route identifier
+     * @return true if mass transit, false if bus
+     */
+    private boolean isMassTransit(String routeId) {
+        // Check if it's a transit line (has a mode in the graph)
+        String mode = graph.getLineMode(routeId);
+        return mode != null; // If it has a mode, it's mass transit
+    }
+    
+    /**
+     * Determines if a bus route is "Integrada" type.
+     * 
+     * @param routeId route identifier
+     * @return true if Integrada, false otherwise
+     */
+    private boolean isIntegradaBus(String routeId) {
+        String routeType = graph.getRouteType(routeId);
+        return "Integrada".equals(routeType);
+    }
+    
+    /**
+     * Internal class to track ride information.
+     */
+    private static class RideInfo {
+        final int index;
+        final String routeId;
+        final int t0;  // Start time when BOARD occurs (before wait)
+        final boolean isMassTransit;
+        
+        RideInfo(int index, String routeId, int t0, boolean isMassTransit) {
+            this.index = index;
+            this.routeId = routeId;
+            this.t0 = t0;
+            this.isMassTransit = isMassTransit;
+        }
     }
 }

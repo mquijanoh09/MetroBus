@@ -11,6 +11,11 @@ public enum StepType {
     WALK,
     
     /**
+     * Waiting step - user waits for a vehicle to arrive
+     */
+    WAIT,
+    
+    /**
      * Boarding step - user boards a vehicle (bus or metro)
      */
     BOARD,

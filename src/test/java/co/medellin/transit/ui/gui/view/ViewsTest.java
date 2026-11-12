@@ -2,7 +2,10 @@ package co.medellin.transit.ui.gui.view;
 
 import co.medellin.transit.ui.TripPlanner;
 import co.medellin.transit.ui.gui.RealNetwork;
+import co.medellin.transit.ui.gui.model.Leg;
+import co.medellin.transit.ui.gui.model.LegBuilder;
 import co.medellin.transit.ui.gui.model.RouteCatalog;
+import co.medellin.transit.ui.gui.model.TransitMode;
 import co.medellin.transit.ui.gui.state.AppController;
 import co.medellin.transit.ui.gui.state.AppState;
 import co.medellin.transit.ui.gui.state.AppStore;
@@ -87,10 +90,19 @@ class ViewsTest {
         controller.plannerReady(planner::plan);
         controller.editTexts("CR 82 x CL 51B", "CL 57A 30-87");
         controller.search();
+        // Which bus the router picks may change with the routing rules; the view's job is
+        // to show that bus by its public code and name, never by its internal id_ruta.
+        Leg busLeg = LegBuilder.legs(store.state().result().getTrip()).stream()
+                .filter(l -> l.mode() == TransitMode.BUS).findFirst().orElseThrow();
+        assertTrue(busLeg.routeCode().matches("\\d{5}"), "Backend gives the internal id: " + busLeg.routeCode());
+        RouteCatalog.RouteLabel label = new RouteCatalog(RealNetwork.DATA).find(busLeg.routeCode()).orElseThrow();
+
         List<LegRow> rows = find(panel.result(), LegRow.class);
-        LegRow bus = rows.stream().filter(r -> r.badgeCode() != null).findFirst().orElseThrow();
-        assertEquals("310", bus.badgeCode());
-        assertEquals("Bus · Directa Circular", bus.secondaryText());
+        LegRow bus = rows.stream().filter(r -> r.secondaryText() != null && r.secondaryText().startsWith("Bus"))
+                .findFirst().orElseThrow();
+        assertEquals(label.code(), bus.badgeCode());
+        assertNotEquals(busLeg.routeCode(), bus.badgeCode());
+        assertEquals("Bus · " + label.name(), bus.secondaryText());
     }
 
     @Test

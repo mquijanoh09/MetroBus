@@ -15,13 +15,13 @@ public class FareSegment {
     /**
      * Creates a new fare segment.
      *
-     * @param mode the transit mode (BUS or METRO)
+     * @param mode the transit mode (BUS or METRO), can be null for aggregate segments
      * @param baseFareCOP the standard fare for this mode
      * @param appliedFareCOP the actual fare charged (may be discounted)
      * @param integrationApplied whether integration discount was applied
      */
     public FareSegment(RouteType mode, int baseFareCOP, int appliedFareCOP, boolean integrationApplied) {
-        this.mode = mode;
+        this.mode = mode; // Allow null
         this.baseFareCOP = baseFareCOP;
         this.appliedFareCOP = appliedFareCOP;
         this.integrationApplied = integrationApplied;

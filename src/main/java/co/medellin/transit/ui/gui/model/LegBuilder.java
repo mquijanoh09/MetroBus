@@ -28,22 +28,35 @@ public final class LegBuilder {
                 i++;
                 continue;
             }
-            // A ride: BOARD? RIDE* ALIGHT? on one route
+            // A ride: WAIT? BOARD RIDE* ALIGHT? on one route
+            // WAIT and BOARD steps are merged into the ride leg (not shown as separate legs)
             String route = step.getRouteInfo().orElse(null);
-            String fromName = step.getLocation().getName();
+            String fromName = null;
             var fromCoord = step.getLocation().getCoord();
-            String toName = fromName;
+            String toName = step.getLocation().getName();
             var toCoord = fromCoord;
             int duration = 0;
+            
             while (i < steps.size()) {
                 Step s = steps.get(i);
                 if (s.getType() == StepType.WALK) {
                     break;
                 }
                 String sRoute = s.getRouteInfo().orElse(route);
-                if (s.getType() == StepType.BOARD && s != step) {
+                
+                // If we encounter a WAIT or BOARD for a DIFFERENT route, start a new leg
+                if ((s.getType() == StepType.WAIT || s.getType() == StepType.BOARD) && 
+                    s != step && 
+                    sRoute != null && route != null && !sRoute.equals(route)) {
                     break; // next ride starts
                 }
+                
+                // Set the boarding location from BOARD step (not WAIT)
+                if (s.getType() == StepType.BOARD) {
+                    fromName = s.getLocation().getName();
+                    fromCoord = s.getLocation().getCoord();
+                }
+                
                 if (route == null) {
                     route = sRoute;
                 }
@@ -55,6 +68,12 @@ public final class LegBuilder {
                     break;
                 }
             }
+            
+            // Use fromName from BOARD, or fallback to first step location if no BOARD found
+            if (fromName == null) {
+                fromName = step.getLocation().getName();
+            }
+            
             legs.add(new Leg(TransitMode.ofRoute(route), route, fromName, fromCoord, toName, toCoord, duration));
         }
         return legs;

@@ -115,8 +115,10 @@ class MainTest {
                   "Should create AddressParser instance");
         assertTrue(mainSource.contains("new AddressLocator()"),
                   "Should create AddressLocator instance");
-        assertTrue(mainSource.contains("new StepBuilder(graph)"),
-                  "Should create StepBuilder with graph");
+        assertTrue(mainSource.contains("new VehicleLabelFormatter(graph, dataDir)"),
+                  "Should create VehicleLabelFormatter with graph and data directory");
+        assertTrue(mainSource.contains("new StepBuilder(graph, vehicleLabelFormatter)"),
+                  "Should create StepBuilder with graph and formatter");
         assertTrue(mainSource.contains("new TripPrinter()"),
                   "Should create TripPrinter instance");
         assertTrue(mainSource.contains("new HomeScreen()"),

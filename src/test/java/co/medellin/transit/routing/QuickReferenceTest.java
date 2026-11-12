@@ -13,6 +13,7 @@ import co.medellin.transit.model.Place;
 import co.medellin.transit.model.Trip;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 
@@ -24,7 +25,7 @@ class QuickReferenceTest {
     @Test
     void testSingleRoute() throws Exception {
         System.out.println("Loading graph...");
-        String dataDir = "C:\\Users\\marti\\Downloads\\transporte-medellin\\kiro\\data";
+        String dataDir = "data";
         
         GraphBuilder builder = new GraphBuilder();
         TransitGraph graph = builder.build(Paths.get(dataDir));
@@ -36,7 +37,9 @@ class QuickReferenceTest {
         // Initialize components
         Parameters params = new Parameters(500.0, 120, 1.5);
         Router router = new Router(graph, params);
-        StepBuilder stepBuilder = new StepBuilder(graph);
+        Path dataPath = Paths.get(dataDir);
+        VehicleLabelFormatter vehicleLabelFormatter = new VehicleLabelFormatter(graph, dataPath);
+        StepBuilder stepBuilder = new StepBuilder(graph, vehicleLabelFormatter);
         FareCalculator fareCalculator = new FareCalculator(FareConfig.defaults(), graph);
         AddressParser addressParser = new AddressParser();
         AddressLocator addressLocator = new AddressLocator();

@@ -4,7 +4,10 @@ import co.medellin.transit.graph.TransitGraph;
 import co.medellin.transit.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 
@@ -16,18 +19,41 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class StepBuilderTest {
     
+    @TempDir
+    Path tempDir;
+    
     private TransitGraph graph;
     private StepBuilder builder;
     
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         graph = new TransitGraph(10);
-        builder = new StepBuilder(graph);
+        
+        // Create a minimal test data directory structure
+        Path rawDir = tempDir.resolve("raw");
+        Files.createDirectories(rawDir);
+        
+        // Create an empty routes.json for the formatter
+        String emptyRoutes = """
+            {
+              "features": []
+            }
+            """;
+        Files.writeString(rawDir.resolve("routes.json"), emptyRoutes);
+        
+        VehicleLabelFormatter formatter = new VehicleLabelFormatter(graph, tempDir);
+        builder = new StepBuilder(graph, formatter);
     }
     
     @Test
     void testConstructorThrowsOnNullGraph() {
-        assertThrows(NullPointerException.class, () -> new StepBuilder(null));
+        VehicleLabelFormatter formatter = new VehicleLabelFormatter(graph, tempDir);
+        assertThrows(NullPointerException.class, () -> new StepBuilder(null, formatter));
+    }
+    
+    @Test
+    void testConstructorThrowsOnNullFormatter() {
+        assertThrows(NullPointerException.class, () -> new StepBuilder(graph, null));
     }
     
     @Test
@@ -132,43 +158,48 @@ class StepBuilderTest {
         
         // Add edges
         graph.addEdge(new Edge(0, 1, EdgeKind.WALK, 120, 150));       // Walk to stop
-        graph.addEdge(new Edge(1, 2, EdgeKind.BOARD, 0, 120));        // Board bus
+        graph.addEdge(new Edge(1, 2, EdgeKind.BOARD, 300, 420));      // Board bus (300s wait)
         graph.addEdge(new Edge(2, 3, EdgeKind.RIDE, 300, 300));       // Ride bus
         graph.addEdge(new Edge(3, 4, EdgeKind.ALIGHT, 10, 10));       // Alight
         graph.addEdge(new Edge(4, 5, EdgeKind.WALK, 90, 120));        // Walk to destination
         
         List<State> path = Arrays.asList(state0, state1, state2, state3, state4, state5);
-        DijkstraResult result = new DijkstraResult(path, 700, 520);
+        DijkstraResult result = new DijkstraResult(path, 1100, 820);  // realSec includes wait time
         
         Trip trip = builder.buildTrip(result);
         
         assertNotNull(trip);
-        assertEquals(520, trip.getTotalDurationSec());
-        assertEquals(5, trip.getSteps().size());
+        assertEquals(820, trip.getTotalDurationSec());
+        assertEquals(6, trip.getSteps().size());
         
-        // Verify step sequence
+        // Verify step sequence: WALK, WAIT, BOARD, RIDE, ALIGHT, WALK
         Step step0 = trip.getSteps().get(0);
         assertEquals(StepType.WALK, step0.getType());
         assertTrue(step0.getDescription().contains("Caminar a Parada A"));
         
         Step step1 = trip.getSteps().get(1);
-        assertEquals(StepType.BOARD, step1.getType());
-        assertTrue(step1.getDescription().contains("Abordar 301 en Parada A"));
-        assertTrue(step1.getRouteInfo().isPresent());
-        assertEquals("301", step1.getRouteInfo().get());
+        assertEquals(StepType.WAIT, step1.getType());
+        assertTrue(step1.getDescription().contains("Esperar"));
+        assertTrue(step1.getDescription().contains("301"));
         
         Step step2 = trip.getSteps().get(2);
-        assertEquals(StepType.RIDE, step2.getType());
-        assertTrue(step2.getDescription().contains("Viajar en 301 por"));
-        assertTrue(step2.getDescription().contains("minutos"));
+        assertEquals(StepType.BOARD, step2.getType());
+        assertTrue(step2.getDescription().contains("Abordar 301 en Parada A"));
+        assertTrue(step2.getRouteInfo().isPresent());
+        assertEquals("301", step2.getRouteInfo().get());
         
         Step step3 = trip.getSteps().get(3);
-        assertEquals(StepType.ALIGHT, step3.getType());
-        assertTrue(step3.getDescription().contains("Bajar en Parada B"));
+        assertEquals(StepType.RIDE, step3.getType());
+        assertTrue(step3.getDescription().contains("Viajar en 301 por"));
+        assertTrue(step3.getDescription().contains("minutos"));
         
         Step step4 = trip.getSteps().get(4);
-        assertEquals(StepType.WALK, step4.getType());
-        assertTrue(step4.getDescription().contains("Caminar a Calle 2"));
+        assertEquals(StepType.ALIGHT, step4.getType());
+        assertTrue(step4.getDescription().contains("Bajar en Parada B"));
+        
+        Step step5 = trip.getSteps().get(5);
+        assertEquals(StepType.WALK, step5.getType());
+        assertTrue(step5.getDescription().contains("Caminar a Calle 2"));
     }
     
     @Test
@@ -195,30 +226,33 @@ class StepBuilderTest {
         graph.addState(state5);
         
         // Add edges
-        graph.addEdge(new Edge(0, 1, EdgeKind.BOARD, 0, 120));
+        graph.addEdge(new Edge(0, 1, EdgeKind.BOARD, 300, 420));  // Board with 300s wait
         graph.addEdge(new Edge(1, 2, EdgeKind.RIDE, 180, 180));  // 3 min
         graph.addEdge(new Edge(2, 3, EdgeKind.RIDE, 240, 240));  // 4 min
         graph.addEdge(new Edge(3, 4, EdgeKind.RIDE, 300, 300));  // 5 min
         graph.addEdge(new Edge(4, 5, EdgeKind.ALIGHT, 10, 10));
         
         List<State> path = Arrays.asList(state0, state1, state2, state3, state4, state5);
-        DijkstraResult result = new DijkstraResult(path, 850, 730);
+        DijkstraResult result = new DijkstraResult(path, 1030, 1030);
         
         Trip trip = builder.buildTrip(result);
         
         assertNotNull(trip);
-        assertEquals(3, trip.getSteps().size());
+        assertEquals(4, trip.getSteps().size());
         
-        Step boardStep = trip.getSteps().get(0);
+        Step waitStep = trip.getSteps().get(0);
+        assertEquals(StepType.WAIT, waitStep.getType());
+        
+        Step boardStep = trip.getSteps().get(1);
         assertEquals(StepType.BOARD, boardStep.getType());
         
-        Step rideStep = trip.getSteps().get(1);
+        Step rideStep = trip.getSteps().get(2);
         assertEquals(StepType.RIDE, rideStep.getType());
-        // Total ride time: 180 + 240 + 300 = 720 seconds = 12 minutes
+        // Total ride time: 180 + 240 + 300 = 720 seconds
         assertEquals(720, rideStep.getDurationSec());
-        assertTrue(rideStep.getDescription().contains("Viajar en 301 por 12 minutos"));
+        assertTrue(rideStep.getDescription().contains("Viajar en 301 por"));
         
-        Step alightStep = trip.getSteps().get(2);
+        Step alightStep = trip.getSteps().get(3);
         assertEquals(StepType.ALIGHT, alightStep.getType());
     }
     
@@ -237,8 +271,8 @@ class StepBuilderTest {
         State state3 = new State(3, transfer, StateType.BUS_STOP, "301", Direction.OUTBOUND);
         State state4 = new State(4, transfer);
         State state5 = new State(5, metroStation);
-        State state6 = new State(6, metroStation, StateType.METRO_STATION, "Línea A", Direction.OUTBOUND);
-        State state7 = new State(7, metroStop2, StateType.METRO_STATION, "Línea A", Direction.OUTBOUND);
+        State state6 = new State(6, metroStation, StateType.METRO_STATION, "LA", Direction.OUTBOUND);
+        State state7 = new State(7, metroStop2, StateType.METRO_STATION, "LA", Direction.OUTBOUND);
         State state8 = new State(8, metroStop2);
         
         graph.addState(state0);
@@ -251,30 +285,33 @@ class StepBuilderTest {
         graph.addState(state7);
         graph.addState(state8);
         
+        // Add metro line mode to graph so formatter can identify it
+        graph.setLineMode("LA", "metro");
+        
         // Add edges for complete trip
         graph.addEdge(new Edge(0, 1, EdgeKind.WALK, 120, 150));       // Walk to bus stop
-        graph.addEdge(new Edge(1, 2, EdgeKind.BOARD, 0, 120));        // Board bus
+        graph.addEdge(new Edge(1, 2, EdgeKind.BOARD, 300, 420));      // Board bus (300s wait)
         graph.addEdge(new Edge(2, 3, EdgeKind.RIDE, 300, 300));       // Ride bus
         graph.addEdge(new Edge(3, 4, EdgeKind.ALIGHT, 10, 10));       // Alight from bus
         graph.addEdge(new Edge(4, 5, EdgeKind.WALK, 120, 150));       // Walk to metro
-        graph.addEdge(new Edge(5, 6, EdgeKind.BOARD, 0, 120));        // Board metro
+        graph.addEdge(new Edge(5, 6, EdgeKind.BOARD, 240, 360));      // Board metro (240s wait)
         graph.addEdge(new Edge(6, 7, EdgeKind.RIDE, 240, 240));       // Ride metro
         graph.addEdge(new Edge(7, 8, EdgeKind.ALIGHT, 10, 10));       // Alight from metro
         
         List<State> path = Arrays.asList(state0, state1, state2, state3, state4, state5, state6, state7, state8);
-        DijkstraResult result = new DijkstraResult(path, 1100, 920);
+        DijkstraResult result = new DijkstraResult(path, 1640, 1380);
         
         Trip trip = builder.buildTrip(result);
         
         assertNotNull(trip);
-        // Should have: WALK, BOARD (bus), RIDE (bus), ALIGHT, WALK, BOARD (metro), RIDE (metro), ALIGHT
-        assertEquals(8, trip.getSteps().size());
+        // Should have: WALK, WAIT, BOARD (bus), RIDE (bus), ALIGHT, WALK, WAIT, BOARD (metro), RIDE (metro), ALIGHT
+        assertEquals(10, trip.getSteps().size());
         
         // Find the board metro step
         boolean foundMetroBoard = false;
         for (Step step : trip.getSteps()) {
             if (step.getType() == StepType.BOARD && 
-                step.getDescription().contains("Línea A")) {
+                step.getDescription().contains("Metro Línea A")) {
                 foundMetroBoard = true;
                 break;
             }

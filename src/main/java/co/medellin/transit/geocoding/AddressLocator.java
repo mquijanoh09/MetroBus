@@ -114,8 +114,7 @@ public class AddressLocator {
     }
     private List<ReferencePoint> buildDefaultReferenceTable() {
         try {
-            String dataDir = System.getProperty("transit.data.dir", 
-                "C:\\Users\\marti\\Downloads\\transporte-medellin\\kiro\\data");
+            String dataDir = System.getProperty("transit.data.dir", "data");
             StopArcGisReader reader = new StopArcGisReader();
             List<Stop> stops = reader.readPaginated(Paths.get(dataDir), "stops", ".json");
             return buildReferenceTable(stops);

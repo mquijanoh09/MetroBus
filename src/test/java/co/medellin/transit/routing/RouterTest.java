@@ -142,7 +142,8 @@ class RouterTest {
         assertTrue(result.isPresent());
         assertEquals(2, result.get().getPathLength());
         assertEquals(realTime, result.get().getRealDurationSec());
-        assertEquals(perceivedCost, result.get().getPerceivedCost());
+        // Perceived cost includes access (30s) + edge (120s) + egress (30s) = 180s
+        assertEquals(180, result.get().getPerceivedCost());
     }
     
     @Test
@@ -195,12 +196,12 @@ class RouterTest {
         assertTrue(result.isPresent());
         assertTrue(result.get().getPathLength() >= 2);
         
-        // Real duration should not include penalties
+        // Real duration should not include penalties but includes access and egress walk time
         int expectedRealDuration = walkTime + rideTime;
         assertEquals(expectedRealDuration, result.get().getRealDurationSec());
         
-        // Perceived cost should include walk penalty and boarding penalty
-        int expectedPerceivedCost = walkCost + params.getBoardingPenaltySec() + rideTime;
+        // Perceived cost includes access (30s) + walk edge (75s) + board (120s) + ride (180s) + alight (0s) + egress (30s) = 435s
+        int expectedPerceivedCost = 435;
         assertEquals(expectedPerceivedCost, result.get().getPerceivedCost());
     }
     
@@ -315,7 +316,8 @@ class RouterTest {
         assertTrue(result.isPresent());
         assertEquals(2, result.get().getPathLength()); // Direct path has 2 states
         assertEquals(directTime, result.get().getRealDurationSec());
-        assertEquals(directCost, result.get().getPerceivedCost());
+        // Perceived cost includes access (30s) + edge (180s) + egress (30s) = 240s
+        assertEquals(240, result.get().getPerceivedCost());
     }
     
     @Test
@@ -396,10 +398,10 @@ class RouterTest {
         // Then: should choose based on perceived cost (penalties matter)
         assertTrue(result.isPresent());
         
-        // If walk cost < bus ride + boarding penalty, should choose walk
-        // walkCost = 100 * 1.5 + 30 = 180
-        // bus cost = 0 + 120 (boarding) + 60 (ride) + 0 (alight) = 180
+        // Both paths have same cost including access and egress:
+        // Walk: access (30s) + edge (180s) + egress (30s) = 240s
+        // Bus: access (30s) + board (120s) + ride (60s) + alight (0s) + egress (30s) = 240s
         // They're equal, so Dijkstra might choose either based on exploration order
-        assertTrue(result.get().getPerceivedCost() <= 180);
+        assertTrue(result.get().getPerceivedCost() <= 240);
     }
 }

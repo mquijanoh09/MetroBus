@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Guard test edits",
+  "description": "When a test file under src/test/ is saved, stop and ask the user to approve any change to expected values, assertions or deleted tests.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/test/**/*.java"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "You just edited a test file. Run `git diff -- <that file>` and check it. If the diff changes any expected value, loosens or removes any assertion (assertEquals -> assertTrue, exact -> range, lower threshold), deletes a test, or adds @Disabled / @EnabledIf / assumptions, STOP: show the user each such change with the spec line or prototype line that justifies it, and wait for approval before continuing. Adding new tests or new assertions does not need approval. Never take an expected value from the program's own current output."
+  }
+}

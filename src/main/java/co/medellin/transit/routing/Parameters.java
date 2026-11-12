@@ -35,6 +35,19 @@ public class Parameters {
     private final double walkingSpeedMps;
     private final double walkStreetFactor;
     
+    // Wait times by mode (seconds)
+    private final int busWaitSec;
+    private final int metroWaitSec;
+    private final int metroplusWaitSec;
+    private final int tramWaitSec;
+    private final int cableCarWaitSec;
+    
+    // Bus speeds by type (km/h)
+    private final double busSpeedDirectaCentro;
+    private final double busSpeedCircular;
+    private final double busSpeedIntegrada;
+    private final double busSpeedDirectaNoCentro;
+    
     /**
      * Creates a Parameters instance by loading from config.properties.
      * Falls back to hardcoded defaults if properties are missing or invalid.
@@ -48,6 +61,19 @@ public class Parameters {
         this.walkPenaltyConstant = getIntProperty(props, "routing.walkPenaltyConstant", DEFAULT_WALK_PENALTY_CONSTANT);
         this.walkingSpeedMps = getDoubleProperty(props, "routing.walkingSpeedMps", DEFAULT_WALKING_SPEED_MPS);
         this.walkStreetFactor = getDoubleProperty(props, "routing.walkStreetFactor", DEFAULT_WALK_STREET_FACTOR);
+        
+        // Wait times by mode
+        this.busWaitSec = getIntProperty(props, "wait.bus", 300);
+        this.metroWaitSec = getIntProperty(props, "wait.metro", 240);
+        this.metroplusWaitSec = getIntProperty(props, "wait.metroplus", 300);
+        this.tramWaitSec = getIntProperty(props, "wait.tram", 300);
+        this.cableCarWaitSec = getIntProperty(props, "wait.cableCar", 120);
+        
+        // Bus speeds by type
+        this.busSpeedDirectaCentro = getDoubleProperty(props, "bus.speed.directaCentro", 15.0);
+        this.busSpeedCircular = getDoubleProperty(props, "bus.speed.circular", 15.0);
+        this.busSpeedIntegrada = getDoubleProperty(props, "bus.speed.integrada", 18.0);
+        this.busSpeedDirectaNoCentro = getDoubleProperty(props, "bus.speed.directaNoCentro", 18.0);
         
         LOGGER.log(Level.INFO, "Routing parameters loaded: accessRadius={0}m, boardingPenalty={1}s, walkMultiplier={2}", 
                    new Object[]{accessRadiusMeters, boardingPenaltySec, walkPenaltyMultiplier});
@@ -67,6 +93,17 @@ public class Parameters {
         this.walkPenaltyConstant = DEFAULT_WALK_PENALTY_CONSTANT;
         this.walkingSpeedMps = DEFAULT_WALKING_SPEED_MPS;
         this.walkStreetFactor = DEFAULT_WALK_STREET_FACTOR;
+        
+        // Use defaults for wait times and speeds
+        this.busWaitSec = 300;
+        this.metroWaitSec = 240;
+        this.metroplusWaitSec = 300;
+        this.tramWaitSec = 300;
+        this.cableCarWaitSec = 120;
+        this.busSpeedDirectaCentro = 15.0;
+        this.busSpeedCircular = 15.0;
+        this.busSpeedIntegrada = 18.0;
+        this.busSpeedDirectaNoCentro = 18.0;
     }
     
     /**
@@ -124,6 +161,87 @@ public class Parameters {
      */
     public double getWalkStreetFactor() {
         return walkStreetFactor;
+    }
+    
+    /**
+     * Gets the average wait time for buses (seconds).
+     * 
+     * @return bus wait time in seconds (default: 300)
+     */
+    public int getBusWaitSec() {
+        return busWaitSec;
+    }
+    
+    /**
+     * Gets the average wait time for metro (seconds).
+     * 
+     * @return metro wait time in seconds (default: 240)
+     */
+    public int getMetroWaitSec() {
+        return metroWaitSec;
+    }
+    
+    /**
+     * Gets the average wait time for Metroplús BRT (seconds).
+     * 
+     * @return Metroplús wait time in seconds (default: 300)
+     */
+    public int getMetroplusWaitSec() {
+        return metroplusWaitSec;
+    }
+    
+    /**
+     * Gets the average wait time for tram (seconds).
+     * 
+     * @return tram wait time in seconds (default: 300)
+     */
+    public int getTramWaitSec() {
+        return tramWaitSec;
+    }
+    
+    /**
+     * Gets the average wait time for cable car (seconds).
+     * 
+     * @return cable car wait time in seconds (default: 120)
+     */
+    public int getCableCarWaitSec() {
+        return cableCarWaitSec;
+    }
+    
+    /**
+     * Gets the bus speed for Directa Centro routes (km/h).
+     * 
+     * @return Directa Centro bus speed (default: 15.0)
+     */
+    public double getBusSpeedDirectaCentro() {
+        return busSpeedDirectaCentro;
+    }
+    
+    /**
+     * Gets the bus speed for Circular routes (km/h).
+     * 
+     * @return Circular bus speed (default: 15.0)
+     */
+    public double getBusSpeedCircular() {
+        return busSpeedCircular;
+    }
+    
+    /**
+     * Gets the bus speed for Integrada routes (km/h).
+     * 
+     * @return Integrada bus speed (default: 18.0)
+     */
+    public double getBusSpeedIntegrada() {
+        return busSpeedIntegrada;
+    }
+    
+    /**
+     * Gets the bus speed for Directa No Centro routes (km/h).
+     * 
+     * @return Directa No Centro bus speed (default: 18.0)
+     */
+    public double getBusSpeedDirectaNoCentro() {
+        return busSpeedDirectaNoCentro;
     }
     
     /**

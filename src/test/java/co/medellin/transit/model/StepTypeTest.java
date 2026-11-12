@@ -9,16 +9,18 @@ class StepTypeTest {
     void testEnumValues() {
         StepType[] values = StepType.values();
         
-        assertEquals(4, values.length);
+        assertEquals(5, values.length);
         assertEquals(StepType.WALK, values[0]);
-        assertEquals(StepType.BOARD, values[1]);
-        assertEquals(StepType.RIDE, values[2]);
-        assertEquals(StepType.ALIGHT, values[3]);
+        assertEquals(StepType.WAIT, values[1]);
+        assertEquals(StepType.BOARD, values[2]);
+        assertEquals(StepType.RIDE, values[3]);
+        assertEquals(StepType.ALIGHT, values[4]);
     }
 
     @Test
     void testValueOf() {
         assertEquals(StepType.WALK, StepType.valueOf("WALK"));
+        assertEquals(StepType.WAIT, StepType.valueOf("WAIT"));
         assertEquals(StepType.BOARD, StepType.valueOf("BOARD"));
         assertEquals(StepType.RIDE, StepType.valueOf("RIDE"));
         assertEquals(StepType.ALIGHT, StepType.valueOf("ALIGHT"));
@@ -46,6 +48,7 @@ class StepTypeTest {
         for (StepType type : StepType.values()) {
             String result = switch (type) {
                 case WALK -> "walking";
+                case WAIT -> "waiting";
                 case BOARD -> "boarding";
                 case RIDE -> "riding";
                 case ALIGHT -> "alighting";

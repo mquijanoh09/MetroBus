@@ -9,6 +9,7 @@ import co.medellin.transit.graph.TransitGraph;
 import co.medellin.transit.routing.Parameters;
 import co.medellin.transit.routing.Router;
 import co.medellin.transit.routing.StepBuilder;
+import co.medellin.transit.routing.VehicleLabelFormatter;
 import co.medellin.transit.ui.HomeScreen;
 import co.medellin.transit.ui.Menu;
 import co.medellin.transit.ui.TripPlanner;
@@ -226,7 +227,8 @@ public class Main {
                 System.setProperty("transit.data.dir", dataDir.toString());
             }
             AddressLocator addressLocator = new AddressLocator();
-            StepBuilder stepBuilder = new StepBuilder(graph);
+            VehicleLabelFormatter vehicleLabelFormatter = new VehicleLabelFormatter(graph, dataDir);
+            StepBuilder stepBuilder = new StepBuilder(graph, vehicleLabelFormatter);
             TripPrinter tripPrinter = new TripPrinter();
             
             // Calculate and display startup metrics

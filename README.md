@@ -997,6 +997,11 @@ remoto configurado, así que todavía no hay nada en `github.com/mquijanoh09/Met
 | 9 | Sacar de la raíz los `TASK_*.md`, `KIRO_*.md`, `main-error*.txt` y `verify_fix.class` | Son notas de desarrollo, no parte de la entrega |
 | 10 | Hacer el primer commit, crear el remoto y publicar | El profesor debe poder clonar |
 
+## 10. Herramientas de desarrollo
+
+- **Kiro** fue el IDE principal: con sus specs (`.kiro/specs/`), reglas (`.kiro/steering/`) y hooks se escribió y corrigió el código de la aplicación.
+- **Claude** se usó como consultor: revisó y verificó el trabajo de Kiro ejecutando la app y las pruebas, propuso las correcciones y redactó la documentación. También se encargó de los commits y los push del repositorio, para mantener el historial ordenado. Por eso aparece como colaborador en GitHub.
+
 ---
 
 *Datos: Alcaldía de Medellín, servicio ArcGIS REST `VM_Movilidad`, descargados el 26 de

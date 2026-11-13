@@ -129,7 +129,7 @@ Medellín addresses form a grid: «CL 50 53-48» means Calle 50 at Carrera 53. P
 ```
 medellin-transit/
 ├── pom.xml
-├── data/                         ← copy of kiro/data (raw JSON + derived CSV)
+├── data/                         ← copy of the downloaded data (raw JSON + derived CSV)
 └── src/
     ├── main/java/co/medellin/transit/
     │   ├── Main.java             ← shows the home screen in the console

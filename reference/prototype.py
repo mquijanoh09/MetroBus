@@ -3,7 +3,7 @@
 It is the behavioral reference for the Java implementation: the Java app must reproduce
 data/test_cases.csv (same cost and vehicles, duration within +/-1 minute).
 
-Usage (from the kiro/ folder):
+Usage (from the project root):
     python3 -I reference/prototype.py data "<origin address>" "<destination address>"
     python3 -I reference/prototype.py data --tests        # 300 random trips + edge cases
     python3 -I reference/prototype.py data --make-cases   # regenerates data/test_cases.csv

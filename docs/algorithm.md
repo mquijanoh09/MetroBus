@@ -1,6 +1,6 @@
 # Routing Algorithm: How the App Finds the Fastest Trip
 
-**Date:** October 29, 2026 · **Audience:** the Kiro spec (requirements → design → tasks)
+**Date:** October 29, 2026 · **Audience:** the project spec (requirements → design → tasks)
 **Tested reference:** `reference/prototype.py` implements everything in this document. It ran 300 random trips with no failures (results in section 9).
 **See also:** `graph-structure.md` (graph and parameters) and `fares.md` (prices).
 

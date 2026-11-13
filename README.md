@@ -8,7 +8,7 @@ vehículo tomar, dónde bajarse, cuánto dura el viaje y cuánto cuesta con las 
 2026. Funciona **sin internet**: todos los datos (3 590 paradas, 252 rutas de bus y 75
 estaciones) se descargaron una sola vez del servicio ArcGIS público de la Alcaldía de
 Medellín y viajan dentro del repositorio, en `data/`. El único algoritmo de búsqueda de
-caminos es **Dijkstra**. La aplicación se desarrolló con el IDE **Kiro**.
+caminos es **Dijkstra**. La aplicación se desarrolló con apoyo de **Claude**.
 
 > **La decisión central del proyecto:** el mapa no se modela como "una parada = un nodo",
 > sino como un grafo de **estados**: estar a pie en un lugar, o estar montado en una ruta
@@ -725,10 +725,8 @@ MetroBus/
     └── util/PerformanceBenchmark.java   Medición manual de tiempos (no la usa Main)
 ```
 
-En la raíz hay además 22 archivos `.md` de seguimiento generados durante el desarrollo
-con Kiro (`TASK_*.md`, `KIRO_*.md`, `FINAL_STATUS.md`…), `test_all_cases.ps1` y cuatro
-registros `main-error*.txt` de 2 a 8 MB. No forman parte de la aplicación
-([pendientes](#9-estado-actual-y-pendientes)).
+Las notas de seguimiento y los registros generados durante el desarrollo no se incluyen en el
+repositorio: no forman parte de la aplicación.
 
 **Por qué la separación es así.** Cada capa solo conoce a la de abajo: `model` no conoce a
 nadie; `graph` no sabe de direcciones; `routing` no sabe de tarifas; `ui` no sabe cómo se
@@ -885,7 +883,7 @@ deduplicar las 10 043 paradas que el grafo ya había leído (ver la segunda exce
 
 **D1. La ruta del equipo del autor sigue escrita en el código.** `AddressLocator()` lee
 las paradas de `System.getProperty("transit.data.dir",
-"C:\\Users\\marti\\Downloads\\transporte-medellin\\kiro\\data")`. La app ya no
+"C:\\Users\\marti\\Downloads\\…\\data")`. La app ya no
 depende de ella, porque `Main` fija la propiedad antes (se comprobó: sin ninguna opción,
 el caso 1 devuelve su ruta). Pero las pruebas de geocodificación y las tres de referencia
 sí: por eso fallan fuera de ese equipo. *Corrección:* pasar al localizador las paradas que
@@ -994,13 +992,12 @@ remoto configurado, así que todavía no hay nada en `github.com/mquijanoh09/Met
 | 6 | Mostrar el código público del bus ([R4](#enrutamiento)) | `Abordar 90081` no le dice nada al pasajero |
 | 7 | Leer de la configuración las esperas y velocidades ([G1](#grafo)) | Hoy cambiar `config.properties` no cambia nada |
 | 8 | Proteger el fin de la entrada ([U1](#interfaz)) | Evita un volcado de pila |
-| 9 | Sacar de la raíz los `TASK_*.md`, `KIRO_*.md`, `main-error*.txt` y `verify_fix.class` | Son notas de desarrollo, no parte de la entrega |
+| 9 | ~~Sacar de la raíz las notas de desarrollo y los registros~~ (hecho) | Son notas de desarrollo, no parte de la entrega |
 | 10 | Hacer el primer commit, crear el remoto y publicar | El profesor debe poder clonar |
 
 ## 10. Herramientas de desarrollo
 
-- **Kiro** fue el IDE principal: con sus specs (`.kiro/specs/`), reglas (`.kiro/steering/`) y hooks se escribió y corrigió el código de la aplicación.
-- **Claude** se usó como consultor: revisó y verificó el trabajo de Kiro ejecutando la app y las pruebas, propuso las correcciones y redactó la documentación. También se encargó de los commits y los push del repositorio, para mantener el historial ordenado. Por eso aparece como colaborador en GitHub.
+- **Claude** se usó como consultor: revisó y verificó el código ejecutando la app y las pruebas, propuso las correcciones y redactó la documentación. También se encargó de los commits y los push del repositorio, para mantener el historial ordenado. Por eso aparece como colaborador en GitHub.
 
 ---
 
